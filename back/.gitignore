@@ -1,0 +1,58 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# .NET specific
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+nuget.exe
+packages/
+
+# Visual Studio
+.vs/
+*.rsuser
+*.sln.ide/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.userprefs
+mono_crash.*
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Secrets
+secrets.json
+appsettings.*.local.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
