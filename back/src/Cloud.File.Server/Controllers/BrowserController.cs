@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Cloud.File.Server.Data.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cloud.File.Server.Controllers;
@@ -9,6 +10,7 @@ namespace Cloud.File.Server.Controllers;
 /// Provides comprehensive file and folder management endpoints.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/browser")]
 public class BrowserController : ControllerBase
 {
@@ -422,6 +424,96 @@ public class BrowserController : ControllerBase
     {
         var stats = await _repository.GetStorageStatsAsync(ct);
         return Ok(stats);
+    }
+
+    /// <summary>
+    /// List all items in trash.
+    /// </summary>
+    [HttpGet("trash")]
+    [ProducesResponseType<TrashListingDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTrash(CancellationToken ct = default)
+    {
+        var trash = await _repository.GetTrashAsync(ct);
+        return Ok(trash);
+    }
+
+    /// <summary>
+    /// Restore items from trash.
+    /// </summary>
+    [HttpPost("trash/restore")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RestoreFromTrash(
+        [FromBody] RestoreRequest request,
+        CancellationToken ct = default
+    )
+    {
+        await _repository.RestoreFromTrashAsync(request.ItemIds, ct);
+        _logger.LogInformation("Restored {Count} items from trash", request.ItemIds.Length);
+        return Ok(new { restored = request.ItemIds.Length });
+    }
+
+    /// <summary>
+    /// Permanently delete items from trash.
+    /// </summary>
+    [HttpDelete("trash/permanent")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PermanentDelete(
+        [FromBody] PermanentDeleteRequest request,
+        CancellationToken ct = default
+    )
+    {
+        await _repository.PermanentDeleteAsync(request.ItemIds, ct);
+        _logger.LogInformation(
+            "Permanently deleted {Count} items from trash",
+            request.ItemIds.Length
+        );
+        return Ok(new { deleted = request.ItemIds.Length });
+    }
+
+    /// <summary>
+    /// Empty all items from trash.
+    /// </summary>
+    [HttpDelete("trash/empty")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> EmptyTrash(CancellationToken ct = default)
+    {
+        await _repository.EmptyTrashAsync(ct);
+        _logger.LogInformation("Emptied trash");
+        return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Search files and folders.
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType<SearchResultDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Search(
+        [FromQuery] string query,
+        [FromQuery] string? fileType = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
+        [FromQuery] long? minSize = null,
+        [FromQuery] long? maxSize = null,
+        CancellationToken ct = default
+    )
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest(new { error = "Search query is required" });
+        }
+
+        var result = await _repository.SearchAsync(
+            query,
+            fileType,
+            fromDate,
+            toDate,
+            minSize,
+            maxSize,
+            ct
+        );
+
+        return Ok(result);
     }
 
     private static string GetMimeType(string fileName)

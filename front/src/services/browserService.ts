@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL, ApiError } from "./api";
+import { getAuthHeaders } from "./authService";
 import { wsClient } from "./wsClient";
 
 const BROWSER_API = "/api/browser";
@@ -67,6 +68,65 @@ export interface StorageStats {
 }
 
 /**
+ * Trash item from the server.
+ */
+export interface TrashItem {
+  id: string;
+  name: string;
+  originalPath: string;
+  type: "file" | "folder";
+  size: number;
+  mimeType?: string;
+  deletedAt: string;
+  createdAt: string;
+}
+
+/**
+ * Trash listing response.
+ */
+export interface TrashListing {
+  items: TrashItem[];
+  totalCount: number;
+  totalSize: number;
+}
+
+/**
+ * Search result item.
+ */
+export interface SearchResultItem {
+  id: string;
+  name: string;
+  path: string;
+  type: "file" | "folder";
+  size: number;
+  mimeType?: string;
+  createdAt: string;
+  modifiedAt: string;
+  parentId?: string;
+}
+
+/**
+ * Search result response.
+ */
+export interface SearchResult {
+  query: string;
+  items: SearchResultItem[];
+  totalCount: number;
+}
+
+/**
+ * Search options.
+ */
+export interface SearchOptions {
+  query: string;
+  fileType?: string;
+  fromDate?: string;
+  toDate?: string;
+  minSize?: number;
+  maxSize?: number;
+}
+
+/**
  * List directory contents.
  */
 export async function listDirectory(
@@ -77,7 +137,9 @@ export async function listDirectory(
   if (options.folderId) params.set("folderId", options.folderId);
 
   const url = `${API_BASE_URL}${BROWSER_API}/list?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -92,7 +154,9 @@ export async function listDirectory(
  */
 export async function getNode(id: string): Promise<FileSystemNode> {
   const url = `${API_BASE_URL}${BROWSER_API}/${id}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -113,7 +177,7 @@ export async function createFolder(
   const url = `${API_BASE_URL}${BROWSER_API}/folder`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ name, parentId, parentPath }),
   });
 
@@ -200,7 +264,9 @@ export function getDownloadUrl(id: string): string {
  */
 export async function downloadFile(id: string, fileName?: string): Promise<void> {
   const url = getDownloadUrl(id);
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -225,7 +291,7 @@ export async function renameNode(id: string, newName: string): Promise<FileSyste
   const url = `${API_BASE_URL}${BROWSER_API}/${id}/rename`;
   const response = await fetch(url, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ newName }),
   });
 
@@ -247,7 +313,7 @@ export async function moveItems(
   const url = `${API_BASE_URL}${BROWSER_API}/move`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ itemIds, destinationFolderId }),
   });
 
@@ -269,7 +335,7 @@ export async function copyItems(
   const url = `${API_BASE_URL}${BROWSER_API}/copy`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ itemIds, destinationFolderId }),
   });
 
@@ -291,7 +357,7 @@ export async function deleteItems(
   const url = `${API_BASE_URL}${BROWSER_API}/delete`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ itemIds, permanent }),
   });
 
@@ -308,7 +374,107 @@ export async function deleteItems(
  */
 export async function getStorageStats(): Promise<StorageStats> {
   const url = `${API_BASE_URL}${BROWSER_API}/stats`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get items in trash.
+ */
+export async function getTrash(): Promise<TrashListing> {
+  const url = `${API_BASE_URL}${BROWSER_API}/trash`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Restore items from trash.
+ */
+export async function restoreFromTrash(itemIds: string[]): Promise<{ restored: number }> {
+  const url = `${API_BASE_URL}${BROWSER_API}/trash/restore`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ itemIds }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Permanently delete items from trash.
+ */
+export async function permanentDelete(itemIds: string[]): Promise<{ deleted: number }> {
+  const url = `${API_BASE_URL}${BROWSER_API}/trash/permanent`;
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ itemIds }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Empty all items from trash.
+ */
+export async function emptyTrash(): Promise<{ success: boolean }> {
+  const url = `${API_BASE_URL}${BROWSER_API}/trash/empty`;
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Search files and folders.
+ */
+export async function searchFiles(options: SearchOptions): Promise<SearchResult> {
+  const params = new URLSearchParams();
+  params.set("query", options.query);
+  if (options.fileType) params.set("fileType", options.fileType);
+  if (options.fromDate) params.set("fromDate", options.fromDate);
+  if (options.toDate) params.set("toDate", options.toDate);
+  if (options.minSize !== undefined) params.set("minSize", options.minSize.toString());
+  if (options.maxSize !== undefined) params.set("maxSize", options.maxSize.toString());
+
+  const url = `${API_BASE_URL}${BROWSER_API}/search?${params.toString()}`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();

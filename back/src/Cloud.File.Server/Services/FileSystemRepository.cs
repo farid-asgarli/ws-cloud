@@ -7,22 +7,31 @@ namespace Cloud.File.Server.Services;
 
 /// <summary>
 /// PostgreSQL-backed file system repository.
+/// Filters all operations by the current authenticated user.
 /// </summary>
 public sealed class FileSystemRepository : IFileSystemRepository
 {
     private readonly CloudFileDbContext _db;
+    private readonly ICurrentUserService _currentUser;
     private readonly ILogger<FileSystemRepository> _logger;
 
-    public FileSystemRepository(CloudFileDbContext db, ILogger<FileSystemRepository> logger)
+    public FileSystemRepository(
+        CloudFileDbContext db,
+        ICurrentUserService currentUser,
+        ILogger<FileSystemRepository> logger
+    )
     {
         _db = db;
+        _currentUser = currentUser;
         _logger = logger;
     }
+
+    private Guid CurrentUserId => _currentUser.RequireUserId();
 
     public async Task<FileSystemNode?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _db
-            .FileSystemNodes.Where(n => n.Id == id && !n.IsDeleted)
+            .FileSystemNodes.Where(n => n.Id == id && n.UserId == CurrentUserId && !n.IsDeleted)
             .FirstOrDefaultAsync(ct);
     }
 
@@ -33,7 +42,9 @@ public sealed class FileSystemRepository : IFileSystemRepository
     {
         var normalized = NormalizePath(virtualPath);
         return await _db
-            .FileSystemNodes.Where(n => n.VirtualPath == normalized && !n.IsDeleted)
+            .FileSystemNodes.Where(n =>
+                n.VirtualPath == normalized && n.UserId == CurrentUserId && !n.IsDeleted
+            )
             .FirstOrDefaultAsync(ct);
     }
 
@@ -43,7 +54,9 @@ public sealed class FileSystemRepository : IFileSystemRepository
     )
     {
         return await _db
-            .FileSystemNodes.Where(n => n.ParentId == parentId && !n.IsDeleted)
+            .FileSystemNodes.Where(n =>
+                n.ParentId == parentId && n.UserId == CurrentUserId && !n.IsDeleted
+            )
             .OrderBy(n => n.Type)
             .ThenBy(n => n.Name)
             .ToArrayAsync(ct);
@@ -54,9 +67,15 @@ public sealed class FileSystemRepository : IFileSystemRepository
         CancellationToken ct = default
     )
     {
+        node.UserId = CurrentUserId;
         _db.FileSystemNodes.Add(node);
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Created node: {Path} ({Type})", node.VirtualPath, node.Type);
+        _logger.LogInformation(
+            "Created node: {Path} ({Type}) for user {UserId}",
+            node.VirtualPath,
+            node.Type,
+            CurrentUserId
+        );
         return node;
     }
 
@@ -93,7 +112,9 @@ public sealed class FileSystemRepository : IFileSystemRepository
     private async Task SoftDeleteChildrenAsync(Guid parentId, CancellationToken ct)
     {
         var children = await _db
-            .FileSystemNodes.Where(n => n.ParentId == parentId && !n.IsDeleted)
+            .FileSystemNodes.Where(n =>
+                n.ParentId == parentId && n.UserId == CurrentUserId && !n.IsDeleted
+            )
             .ToListAsync(ct);
 
         foreach (var child in children)
@@ -110,7 +131,9 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
     public async Task HardDeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var node = await _db.FileSystemNodes.FindAsync([id], ct);
+        var node = await _db
+            .FileSystemNodes.Where(n => n.Id == id && n.UserId == CurrentUserId)
+            .FirstOrDefaultAsync(ct);
         if (node is null)
             return;
 
@@ -123,7 +146,7 @@ public sealed class FileSystemRepository : IFileSystemRepository
     {
         var normalized = NormalizePath(virtualPath);
         return await _db.FileSystemNodes.AnyAsync(
-            n => n.VirtualPath == normalized && !n.IsDeleted,
+            n => n.VirtualPath == normalized && n.UserId == CurrentUserId && !n.IsDeleted,
             ct
         );
     }
@@ -131,7 +154,11 @@ public sealed class FileSystemRepository : IFileSystemRepository
     public async Task<bool> ExistsAsync(Guid? parentId, string name, CancellationToken ct = default)
     {
         return await _db.FileSystemNodes.AnyAsync(
-            n => n.ParentId == parentId && n.Name == name && !n.IsDeleted,
+            n =>
+                n.ParentId == parentId
+                && n.Name == name
+                && n.UserId == CurrentUserId
+                && !n.IsDeleted,
             ct
         );
     }
@@ -206,7 +233,10 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
             var existingNode = await _db
                 .FileSystemNodes.Where(n =>
-                    n.ParentId == currentParentId && n.Name == segment && !n.IsDeleted
+                    n.ParentId == currentParentId
+                    && n.Name == segment
+                    && n.UserId == CurrentUserId
+                    && !n.IsDeleted
                 )
                 .FirstOrDefaultAsync(ct);
 
@@ -233,6 +263,7 @@ public sealed class FileSystemRepository : IFileSystemRepository
                     ParentId = currentParentId,
                     Depth = i,
                     Size = 0,
+                    UserId = CurrentUserId,
                 };
                 _db.FileSystemNodes.Add(currentNode);
                 await _db.SaveChangesAsync(ct);
@@ -272,7 +303,12 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
         // Check if already exists and delete old one if overwriting
         var existing = await _db
-            .FileSystemNodes.Where(n => n.ParentId == parentId && n.Name == name && !n.IsDeleted)
+            .FileSystemNodes.Where(n =>
+                n.ParentId == parentId
+                && n.Name == name
+                && n.UserId == CurrentUserId
+                && !n.IsDeleted
+            )
             .FirstOrDefaultAsync(ct);
 
         if (existing != null)
@@ -332,8 +368,11 @@ public sealed class FileSystemRepository : IFileSystemRepository
             }
         }
 
+        var userId = CurrentUserId;
         var children = await _db
-            .FileSystemNodes.Where(n => n.ParentId == parentId && !n.IsDeleted)
+            .FileSystemNodes.Where(n =>
+                n.ParentId == parentId && n.UserId == userId && !n.IsDeleted
+            )
             .OrderBy(n => n.Type)
             .ThenBy(n => n.Name)
             .Select(n => new FileSystemNodeDto
@@ -349,7 +388,9 @@ public sealed class FileSystemRepository : IFileSystemRepository
                 ParentId = n.ParentId,
                 HasChildren =
                     n.Type == NodeType.Folder
-                    && _db.FileSystemNodes.Any(c => c.ParentId == n.Id && !c.IsDeleted),
+                    && _db.FileSystemNodes.Any(c =>
+                        c.ParentId == n.Id && c.UserId == userId && !c.IsDeleted
+                    ),
             })
             .ToArrayAsync(ct);
 
@@ -385,11 +426,12 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
         var ancestors = new List<BreadcrumbItem>();
         var currentId = folderId;
+        var userId = CurrentUserId;
 
         while (currentId.HasValue)
         {
             var node = await _db
-                .FileSystemNodes.Where(n => n.Id == currentId.Value)
+                .FileSystemNodes.Where(n => n.Id == currentId.Value && n.UserId == userId)
                 .Select(n => new
                 {
                     n.Id,
@@ -422,8 +464,10 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
     public async Task<StorageStatsDto> GetStorageStatsAsync(CancellationToken ct = default)
     {
+        var userId = CurrentUserId;
         var stats = await _db
-            .FileSystemNodes.GroupBy(_ => 1)
+            .FileSystemNodes.Where(n => n.UserId == userId)
+            .GroupBy(_ => 1)
             .Select(g => new
             {
                 TotalFiles = g.Count(n => n.Type == NodeType.File && !n.IsDeleted),
@@ -507,11 +551,12 @@ public sealed class FileSystemRepository : IFileSystemRepository
         CancellationToken ct
     )
     {
+        var userId = CurrentUserId;
         var currentId = nodeId;
         while (true)
         {
             var node = await _db
-                .FileSystemNodes.Where(n => n.Id == currentId)
+                .FileSystemNodes.Where(n => n.Id == currentId && n.UserId == userId)
                 .Select(n => n.ParentId)
                 .FirstOrDefaultAsync(ct);
 
@@ -531,7 +576,10 @@ public sealed class FileSystemRepository : IFileSystemRepository
         CancellationToken ct
     )
     {
-        var children = await _db.FileSystemNodes.Where(n => n.ParentId == parentId).ToListAsync(ct);
+        var userId = CurrentUserId;
+        var children = await _db
+            .FileSystemNodes.Where(n => n.ParentId == parentId && n.UserId == userId)
+            .ToListAsync(ct);
 
         foreach (var child in children)
         {
@@ -565,9 +613,10 @@ public sealed class FileSystemRepository : IFileSystemRepository
 
     private async Task CopyNodeAsync(Guid nodeId, Guid? destinationFolderId, CancellationToken ct)
     {
+        var userId = CurrentUserId;
         var source = await _db
             .FileSystemNodes.Include(n => n.Children)
-            .FirstOrDefaultAsync(n => n.Id == nodeId && !n.IsDeleted, ct);
+            .FirstOrDefaultAsync(n => n.Id == nodeId && n.UserId == userId && !n.IsDeleted, ct);
 
         if (source == null)
             return;
@@ -601,6 +650,7 @@ public sealed class FileSystemRepository : IFileSystemRepository
             MimeType = source.MimeType,
             ContentHash = source.ContentHash,
             Depth = destDepth + 1,
+            UserId = CurrentUserId,
         };
 
         _db.FileSystemNodes.Add(copy);
@@ -657,6 +707,336 @@ public sealed class FileSystemRepository : IFileSystemRepository
                 await SoftDeleteAsync(itemId, ct);
             }
         }
+    }
+
+    public async Task<TrashListingDto> GetTrashAsync(CancellationToken ct = default)
+    {
+        // Get only top-level deleted items (not children of deleted folders)
+        var deletedItems = await _db
+            .FileSystemNodes.Where(n =>
+                n.UserId == CurrentUserId
+                && n.IsDeleted
+                && (n.Parent == null || !n.Parent.IsDeleted)
+            )
+            .OrderByDescending(n => n.DeletedAt)
+            .ToListAsync(ct);
+
+        var items = deletedItems
+            .Select(n => new TrashItemDto
+            {
+                Id = n.Id,
+                Name = n.Name,
+                OriginalPath = n.VirtualPath,
+                Type = n.Type == NodeType.Folder ? "folder" : "file",
+                Size = n.Size,
+                MimeType = n.MimeType,
+                DeletedAt = n.DeletedAt ?? n.ModifiedAt,
+                CreatedAt = n.CreatedAt,
+            })
+            .ToArray();
+
+        var totalSize = items.Sum(i => i.Size);
+
+        return new TrashListingDto
+        {
+            Items = items,
+            TotalCount = items.Length,
+            TotalSize = totalSize,
+        };
+    }
+
+    public async Task RestoreFromTrashAsync(Guid[] itemIds, CancellationToken ct = default)
+    {
+        foreach (var itemId in itemIds)
+        {
+            await RestoreItemAsync(itemId, ct);
+        }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task RestoreItemAsync(Guid id, CancellationToken ct)
+    {
+        var node = await _db
+            .FileSystemNodes.Where(n => n.Id == id && n.UserId == CurrentUserId && n.IsDeleted)
+            .FirstOrDefaultAsync(ct);
+
+        if (node is null)
+            return;
+
+        // Check if the parent still exists and is not deleted
+        if (node.ParentId.HasValue)
+        {
+            var parent = await _db
+                .FileSystemNodes.Where(n =>
+                    n.Id == node.ParentId.Value && n.UserId == CurrentUserId && !n.IsDeleted
+                )
+                .FirstOrDefaultAsync(ct);
+
+            if (parent is null)
+            {
+                // Parent was deleted, move to root
+                node.ParentId = null;
+                node.VirtualPath = "/" + node.Name;
+                node.Depth = 0;
+            }
+        }
+
+        // Check for name conflict at restore location
+        var conflictingName = await _db.FileSystemNodes.AnyAsync(
+            n =>
+                n.ParentId == node.ParentId
+                && n.Name == node.Name
+                && n.UserId == CurrentUserId
+                && !n.IsDeleted
+                && n.Id != node.Id,
+            ct
+        );
+
+        if (conflictingName)
+        {
+            // Add timestamp to avoid conflict
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+            var ext = Path.GetExtension(node.Name);
+            var baseName = Path.GetFileNameWithoutExtension(node.Name);
+            node.Name = $"{baseName}_{timestamp}{ext}";
+
+            // Update virtual path
+            var parentPath = node.ParentId.HasValue
+                ? (
+                    await _db
+                        .FileSystemNodes.Where(n => n.Id == node.ParentId.Value)
+                        .Select(n => n.VirtualPath)
+                        .FirstOrDefaultAsync(ct)
+                    ?? "/"
+                )
+                : "/";
+            node.VirtualPath = parentPath == "/" ? $"/{node.Name}" : $"{parentPath}/{node.Name}";
+        }
+
+        node.IsDeleted = false;
+        node.DeletedAt = null;
+        node.ModifiedAt = DateTimeOffset.UtcNow;
+
+        // Recursively restore children
+        if (node.Type == NodeType.Folder)
+        {
+            await RestoreChildrenAsync(id, ct);
+        }
+
+        _logger.LogInformation("Restored from trash: {Path}", node.VirtualPath);
+    }
+
+    private async Task RestoreChildrenAsync(Guid parentId, CancellationToken ct)
+    {
+        var children = await _db
+            .FileSystemNodes.Where(n =>
+                n.ParentId == parentId && n.UserId == CurrentUserId && n.IsDeleted
+            )
+            .ToListAsync(ct);
+
+        foreach (var child in children)
+        {
+            child.IsDeleted = false;
+            child.DeletedAt = null;
+
+            if (child.Type == NodeType.Folder)
+            {
+                await RestoreChildrenAsync(child.Id, ct);
+            }
+        }
+    }
+
+    public async Task PermanentDeleteAsync(Guid[] itemIds, CancellationToken ct = default)
+    {
+        foreach (var itemId in itemIds)
+        {
+            await PermanentDeleteItemAsync(itemId, ct);
+        }
+    }
+
+    private async Task PermanentDeleteItemAsync(Guid id, CancellationToken ct)
+    {
+        var node = await _db
+            .FileSystemNodes.Where(n => n.Id == id && n.UserId == CurrentUserId && n.IsDeleted)
+            .FirstOrDefaultAsync(ct);
+
+        if (node is null)
+            return;
+
+        // Recursively delete children first
+        if (node.Type == NodeType.Folder)
+        {
+            var children = await _db
+                .FileSystemNodes.Where(n => n.ParentId == id && n.UserId == CurrentUserId)
+                .Select(n => n.Id)
+                .ToListAsync(ct);
+
+            foreach (var childId in children)
+            {
+                await PermanentDeleteItemAsync(childId, ct);
+            }
+        }
+
+        // Delete physical file if exists
+        if (
+            node.Type == NodeType.File
+            && !string.IsNullOrEmpty(node.StoragePath)
+            && System.IO.File.Exists(node.StoragePath)
+        )
+        {
+            try
+            {
+                System.IO.File.Delete(node.StoragePath);
+                _logger.LogInformation("Deleted physical file: {Path}", node.StoragePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete physical file: {Path}", node.StoragePath);
+            }
+        }
+
+        _db.FileSystemNodes.Remove(node);
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("Permanently deleted: {Path}", node.VirtualPath);
+    }
+
+    public async Task EmptyTrashAsync(CancellationToken ct = default)
+    {
+        var deletedItems = await _db
+            .FileSystemNodes.Where(n =>
+                n.UserId == CurrentUserId
+                && n.IsDeleted
+                && (n.Parent == null || !n.Parent.IsDeleted)
+            )
+            .Select(n => n.Id)
+            .ToListAsync(ct);
+
+        await PermanentDeleteAsync(deletedItems.ToArray(), ct);
+        _logger.LogInformation("Emptied trash for user {UserId}", CurrentUserId);
+    }
+
+    public async Task<SearchResultDto> SearchAsync(
+        string query,
+        string? fileType = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        long? minSize = null,
+        long? maxSize = null,
+        CancellationToken ct = default
+    )
+    {
+        var userId = CurrentUserId;
+        var queryLower = query.ToLowerInvariant();
+
+        // Build the base query
+        var baseQuery = _db.FileSystemNodes.Where(n => n.UserId == userId && !n.IsDeleted);
+
+        // Search by name (case-insensitive contains)
+        baseQuery = baseQuery.Where(n => EF.Functions.ILike(n.Name, $"%{queryLower}%"));
+
+        // Filter by file type (extension or MIME type)
+        if (!string.IsNullOrEmpty(fileType))
+        {
+            var typeLower = fileType.ToLowerInvariant();
+
+            // Handle common file type categories
+            if (typeLower == "image")
+            {
+                baseQuery = baseQuery.Where(n =>
+                    n.MimeType != null && n.MimeType.StartsWith("image/")
+                );
+            }
+            else if (typeLower == "video")
+            {
+                baseQuery = baseQuery.Where(n =>
+                    n.MimeType != null && n.MimeType.StartsWith("video/")
+                );
+            }
+            else if (typeLower == "audio")
+            {
+                baseQuery = baseQuery.Where(n =>
+                    n.MimeType != null && n.MimeType.StartsWith("audio/")
+                );
+            }
+            else if (typeLower == "document")
+            {
+                baseQuery = baseQuery.Where(n =>
+                    n.MimeType != null
+                    && (
+                        n.MimeType.StartsWith("text/")
+                        || n.MimeType == "application/pdf"
+                        || n.MimeType.Contains("document")
+                        || n.MimeType.Contains("spreadsheet")
+                        || n.MimeType.Contains("presentation")
+                    )
+                );
+            }
+            else if (typeLower == "folder")
+            {
+                baseQuery = baseQuery.Where(n => n.Type == NodeType.Folder);
+            }
+            else
+            {
+                // Filter by extension
+                var extension = typeLower.StartsWith(".") ? typeLower : $".{typeLower}";
+                baseQuery = baseQuery.Where(n => EF.Functions.ILike(n.Name, $"%{extension}"));
+            }
+        }
+
+        // Filter by date range
+        if (fromDate.HasValue)
+        {
+            baseQuery = baseQuery.Where(n => n.ModifiedAt >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            baseQuery = baseQuery.Where(n => n.ModifiedAt <= toDate.Value);
+        }
+
+        // Filter by size range
+        if (minSize.HasValue)
+        {
+            baseQuery = baseQuery.Where(n => n.Size >= minSize.Value);
+        }
+
+        if (maxSize.HasValue)
+        {
+            baseQuery = baseQuery.Where(n => n.Size <= maxSize.Value);
+        }
+
+        // Execute query with ordering
+        var items = await baseQuery
+            .OrderBy(n => n.Type)
+            .ThenByDescending(n => n.ModifiedAt)
+            .Take(100) // Limit results
+            .Select(n => new SearchResultItemDto
+            {
+                Id = n.Id,
+                Name = n.Name,
+                Path = n.VirtualPath,
+                Type = n.Type == NodeType.Folder ? "folder" : "file",
+                Size = n.Size,
+                MimeType = n.MimeType,
+                CreatedAt = n.CreatedAt,
+                ModifiedAt = n.ModifiedAt,
+                ParentId = n.ParentId,
+            })
+            .ToArrayAsync(ct);
+
+        _logger.LogInformation(
+            "Search for '{Query}' returned {Count} results for user {UserId}",
+            query,
+            items.Length,
+            userId
+        );
+
+        return new SearchResultDto
+        {
+            Query = query,
+            Items = items,
+            TotalCount = items.Length,
+        };
     }
 
     public string NormalizePath(string path)

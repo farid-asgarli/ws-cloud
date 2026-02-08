@@ -5,6 +5,7 @@
 
 import { encode, decode } from "@msgpack/msgpack";
 import { WS_BASE_URL } from "./api";
+import { getToken } from "./authService";
 import type { DirectoryEntry, FileStat, FileChangeEvent, UploadProgress } from "./types";
 
 // Threshold for using chunked uploads (1MB)
@@ -128,7 +129,9 @@ class FileSystemWebSocketClient {
   // private reconnectDelay = 1000;
 
   private get url(): string {
-    return `${WS_BASE_URL}/ws`;
+    const token = getToken();
+    const wsUrl = `${WS_BASE_URL}/ws`;
+    return token ? `${wsUrl}?access_token=${encodeURIComponent(token)}` : wsUrl;
   }
 
   /**

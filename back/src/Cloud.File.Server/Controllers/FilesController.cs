@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cloud.File.Server.Controllers;
@@ -7,6 +8,7 @@ namespace Cloud.File.Server.Controllers;
 /// Provides HTTP endpoints as an alternative to WebSocket communication.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class FilesController : ControllerBase
 {

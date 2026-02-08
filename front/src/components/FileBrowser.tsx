@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight,
+  Copy,
   Download,
   File,
   FileText,
@@ -19,6 +20,7 @@ import {
   List,
   Loader2,
   MoreHorizontal,
+  Move,
   Music,
   Pencil,
   RefreshCw,
@@ -76,9 +78,12 @@ import {
   downloadFile,
   renameNode,
   deleteItems,
+  moveItems,
+  copyItems,
   type FileSystemNode,
   type BreadcrumbItem,
 } from "@/services/browserService";
+import { FolderPickerDialog } from "@/components/FolderPickerDialog";
 import { formatFileSize } from "@/services/fileService";
 
 type ViewMode = "grid" | "list";
@@ -174,6 +179,15 @@ export function FileBrowser({ className }: FileBrowserProps) {
   const [renameName, setRenameName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState<string[]>([]);
+
+  // Copy/Move
+  const [copyMoveOpen, setCopyMoveOpen] = useState(false);
+  const [copyMoveMode, setCopyMoveMode] = useState<"copy" | "move">("copy");
+  const [itemsToCopyMove, setItemsToCopyMove] = useState<string[]>([]);
+
+  // Drag and drop for moving items
+  const [draggedItems, setDraggedItems] = useState<string[]>([]);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // Upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -331,6 +345,108 @@ export function FileBrowser({ className }: FileBrowserProps) {
     setDeleteOpen(true);
   }, []);
 
+  // Copy/Move
+  const openCopyMoveDialog = useCallback((ids: string[], mode: "copy" | "move") => {
+    setItemsToCopyMove(ids);
+    setCopyMoveMode(mode);
+    setCopyMoveOpen(true);
+  }, []);
+
+  const handleCopyMove = useCallback(
+    async (destinationFolderId?: string) => {
+      if (itemsToCopyMove.length === 0) return;
+
+      try {
+        if (copyMoveMode === "copy") {
+          await copyItems(itemsToCopyMove, destinationFolderId);
+          toast.success(`Copied ${itemsToCopyMove.length} item(s)`);
+        } else {
+          await moveItems(itemsToCopyMove, destinationFolderId);
+          toast.success(`Moved ${itemsToCopyMove.length} item(s)`);
+        }
+        setCopyMoveOpen(false);
+        setItemsToCopyMove([]);
+        setSelectedItems(new Set());
+        loadDirectory();
+      } catch (error) {
+        console.error(`Failed to ${copyMoveMode}:`, error);
+        toast.error(`Failed to ${copyMoveMode}`);
+        throw error; // Re-throw so dialog knows operation failed
+      }
+    },
+    [itemsToCopyMove, copyMoveMode, loadDirectory]
+  );
+
+  // Drag and drop handlers for moving items between folders
+  const handleItemDragStart = useCallback(
+    (e: React.DragEvent, item: FileSystemNode) => {
+      // If the dragged item is selected, move all selected items
+      const itemsToMove = selectedItems.has(item.id) ? Array.from(selectedItems) : [item.id];
+
+      setDraggedItems(itemsToMove);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("application/x-file-ids", JSON.stringify(itemsToMove));
+    },
+    [selectedItems]
+  );
+
+  const handleItemDragEnd = useCallback(() => {
+    setDraggedItems([]);
+    setDropTargetId(null);
+  }, []);
+
+  const handleFolderDragOver = useCallback(
+    (e: React.DragEvent, folder: FileSystemNode) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Don't allow dropping on a folder that's being dragged
+      if (draggedItems.includes(folder.id)) {
+        e.dataTransfer.dropEffect = "none";
+        return;
+      }
+
+      e.dataTransfer.dropEffect = "move";
+      setDropTargetId(folder.id);
+    },
+    [draggedItems]
+  );
+
+  const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetId(null);
+  }, []);
+
+  const handleFolderDrop = useCallback(
+    async (e: React.DragEvent, folder: FileSystemNode) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropTargetId(null);
+
+      // Don't allow dropping on a folder that's being dragged
+      if (draggedItems.includes(folder.id)) {
+        return;
+      }
+
+      const data = e.dataTransfer.getData("application/x-file-ids");
+      if (!data) return;
+
+      try {
+        const itemIds = JSON.parse(data) as string[];
+        await moveItems(itemIds, folder.id);
+        toast.success(`Moved ${itemIds.length} item(s) to ${folder.name}`);
+        setDraggedItems([]);
+        setSelectedItems(new Set());
+        loadDirectory();
+      } catch (error) {
+        console.error("Failed to move items:", error);
+        toast.error("Failed to move items");
+      }
+    },
+    [draggedItems, loadDirectory]
+  );
+
   // Upload
   const handleUpload = useCallback(
     async (files: FileList | null) => {
@@ -446,7 +562,24 @@ export function FileBrowser({ className }: FileBrowserProps) {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => openCopyMoveDialog(Array.from(selectedItems), "copy")}
+                title="Copy to..."
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openCopyMoveDialog(Array.from(selectedItems), "move")}
+                title="Move to..."
+              >
+                <Move className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => openDeleteDialog(Array.from(selectedItems))}
+                title="Delete"
               >
                 <Trash2 className="text-destructive h-4 w-4" />
               </Button>
@@ -519,10 +652,20 @@ export function FileBrowser({ className }: FileBrowserProps) {
                   <div
                     className={cn(
                       "group hover:bg-accent relative flex cursor-pointer flex-col items-center rounded-lg border p-4 transition-all",
-                      selectedItems.has(item.id) && "border-primary bg-primary/5"
+                      selectedItems.has(item.id) && "border-primary bg-primary/5",
+                      draggedItems.includes(item.id) && "opacity-50",
+                      dropTargetId === item.id && "border-primary bg-primary/10 ring-primary ring-2"
                     )}
                     onClick={(e) => handleItemClick(e, item, index)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
+                    draggable
+                    onDragStart={(e) => handleItemDragStart(e, item)}
+                    onDragEnd={handleItemDragEnd}
+                    onDragOver={
+                      item.type === "folder" ? (e) => handleFolderDragOver(e, item) : undefined
+                    }
+                    onDragLeave={item.type === "folder" ? handleFolderDragLeave : undefined}
+                    onDrop={item.type === "folder" ? (e) => handleFolderDrop(e, item) : undefined}
                   >
                     <div className="absolute top-2 left-2">
                       <Checkbox
@@ -552,6 +695,15 @@ export function FileBrowser({ className }: FileBrowserProps) {
                         Download
                       </>
                     )}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => openCopyMoveDialog([item.id], "copy")}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy to...
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => openCopyMoveDialog([item.id], "move")}>
+                    <Move className="mr-2 h-4 w-4" />
+                    Move to...
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => openRenameDialog(item)}>
@@ -594,10 +746,20 @@ export function FileBrowser({ className }: FileBrowserProps) {
                   <div
                     className={cn(
                       "hover:bg-accent grid cursor-pointer grid-cols-12 gap-4 px-4 py-2 transition-colors",
-                      selectedItems.has(item.id) && "bg-primary/5"
+                      selectedItems.has(item.id) && "bg-primary/5",
+                      draggedItems.includes(item.id) && "opacity-50",
+                      dropTargetId === item.id && "bg-primary/10 ring-primary ring-2"
                     )}
                     onClick={(e) => handleItemClick(e, item, index)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
+                    draggable
+                    onDragStart={(e) => handleItemDragStart(e, item)}
+                    onDragEnd={handleItemDragEnd}
+                    onDragOver={
+                      item.type === "folder" ? (e) => handleFolderDragOver(e, item) : undefined
+                    }
+                    onDragLeave={item.type === "folder" ? handleFolderDragLeave : undefined}
+                    onDrop={item.type === "folder" ? (e) => handleFolderDrop(e, item) : undefined}
                   >
                     <div className="col-span-6 flex items-center gap-3">
                       <Checkbox checked={selectedItems.has(item.id)} />
@@ -632,6 +794,15 @@ export function FileBrowser({ className }: FileBrowserProps) {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openCopyMoveDialog([item.id], "copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy to...
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openCopyMoveDialog([item.id], "move")}>
+                            <Move className="mr-2 h-4 w-4" />
+                            Move to...
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => openRenameDialog(item)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Rename
@@ -662,6 +833,15 @@ export function FileBrowser({ className }: FileBrowserProps) {
                         Download
                       </>
                     )}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => openCopyMoveDialog([item.id], "copy")}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy to...
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => openCopyMoveDialog([item.id], "move")}>
+                    <Move className="mr-2 h-4 w-4" />
+                    Move to...
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => openRenameDialog(item)}>
@@ -768,6 +948,17 @@ export function FileBrowser({ className }: FileBrowserProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Copy/Move Dialog */}
+      <FolderPickerDialog
+        open={copyMoveOpen}
+        onOpenChange={setCopyMoveOpen}
+        title={copyMoveMode === "copy" ? "Copy to..." : "Move to..."}
+        description={`Select a destination folder to ${copyMoveMode} ${itemsToCopyMove.length} item(s).`}
+        confirmLabel={copyMoveMode === "copy" ? "Copy" : "Move"}
+        onConfirm={handleCopyMove}
+        excludeIds={itemsToCopyMove}
+      />
     </div>
   );
 }

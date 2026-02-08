@@ -52,6 +52,23 @@ public interface IFileSystemRepository
     Task CopyAsync(Guid[] itemIds, Guid? destinationFolderId, CancellationToken ct = default);
     Task DeleteAsync(Guid[] itemIds, bool permanent, CancellationToken ct = default);
 
+    // Trash operations
+    Task<TrashListingDto> GetTrashAsync(CancellationToken ct = default);
+    Task RestoreFromTrashAsync(Guid[] itemIds, CancellationToken ct = default);
+    Task PermanentDeleteAsync(Guid[] itemIds, CancellationToken ct = default);
+    Task EmptyTrashAsync(CancellationToken ct = default);
+
+    // Search operations
+    Task<SearchResultDto> SearchAsync(
+        string query,
+        string? fileType = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        long? minSize = null,
+        long? maxSize = null,
+        CancellationToken ct = default
+    );
+
     // Path utilities
     string NormalizePath(string path);
     (string parentPath, string name) SplitPath(string path);

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Cloud,
   FolderOpen,
@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  LogOut,
+  User,
+  Search,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -28,21 +31,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { getStorageStats, type StorageStats } from "@/services/browserService";
 import { formatFileSize } from "@/services/fileService";
+import { useAuth } from "@/contexts/AuthContext";
 
 type ColorTheme = "neutral" | "blue" | "rose" | "green" | "orange";
 
 const navItems = [
   { path: "/files", label: "My Files", icon: FolderOpen },
+  { path: "/search", label: "Search", icon: Search },
   { path: "/recent", label: "Recent", icon: Home },
   { path: "/trash", label: "Trash", icon: Trash2 },
 ];
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [colorTheme, setColorTheme] = useState<ColorTheme>("neutral");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -65,6 +80,11 @@ export function Layout() {
     } else {
       document.documentElement.setAttribute("data-color-theme", theme);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   return (
@@ -202,6 +222,31 @@ export function Layout() {
                   <p>Settings</p>
                 </TooltipContent>
               </Tooltip>
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{user?.displayName || "User"}</p>
+                      <p className="text-muted-foreground text-xs">{user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
