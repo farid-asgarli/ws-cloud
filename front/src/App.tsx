@@ -22,7 +22,6 @@ import {
   Clock,
   Download,
   Eye,
-  ExternalLink,
   FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -548,7 +547,9 @@ function TrashPage() {
       {/* Actions bar */}
       {selectedIds.size > 0 && (
         <div className="bg-accent/50 flex items-center gap-2.5 border-b px-4 py-2">
-          <span className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-semibold">{selectedIds.size} selected</span>
+          <span className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-semibold">
+            {selectedIds.size} selected
+          </span>
           <div className="flex-1" />
           <Button
             variant="outline"
@@ -647,9 +648,7 @@ function TrashPage() {
             <div className="bg-destructive/10 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
               <AlertTriangle className="text-destructive h-5 w-5" />
             </div>
-            <AlertDialogTitle className="text-center">
-              Empty Trash?
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center">Empty Trash?</AlertDialogTitle>
             <AlertDialogDescription className="text-center">
               This will permanently delete all {items.length} item
               {items.length !== 1 ? "s" : ""} in trash. This action cannot be undone.
@@ -676,9 +675,7 @@ function TrashPage() {
             <div className="bg-destructive/10 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
               <AlertTriangle className="text-destructive h-5 w-5" />
             </div>
-            <AlertDialogTitle className="text-center">
-              Delete Forever?
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center">Delete Forever?</AlertDialogTitle>
             <AlertDialogDescription className="text-center">
               This will permanently delete {selectedIds.size} selected item
               {selectedIds.size !== 1 ? "s" : ""}. This action cannot be undone.

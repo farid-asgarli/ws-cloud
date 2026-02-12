@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, File, Loader2, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Upload } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -193,20 +193,26 @@ export function FileUpload({
                 <Loader2 className="text-primary h-7 w-7 animate-spin" />
               </div>
               <p className="text-sm font-medium">Uploading...</p>
-              <p className="text-muted-foreground mt-1 text-xs tabular-nums">{totalProgress}% complete</p>
+              <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+                {totalProgress}% complete
+              </p>
             </>
           ) : (
             <>
-              <div className={cn(
-                "bg-muted mb-3 flex items-center justify-center rounded-2xl transition-colors",
-                isDragOver ? "bg-primary/10" : "",
-                compact ? "h-10 w-10" : "h-14 w-14"
-              )}>
-                <Upload className={cn(
-                  "text-muted-foreground transition-colors",
-                  isDragOver && "text-primary",
-                  compact ? "h-5 w-5" : "h-6 w-6"
-                )} />
+              <div
+                className={cn(
+                  "bg-muted mb-3 flex items-center justify-center rounded-2xl transition-colors",
+                  isDragOver ? "bg-primary/10" : "",
+                  compact ? "h-10 w-10" : "h-14 w-14"
+                )}
+              >
+                <Upload
+                  className={cn(
+                    "text-muted-foreground transition-colors",
+                    isDragOver && "text-primary",
+                    compact ? "h-5 w-5" : "h-6 w-6"
+                  )}
+                />
               </div>
               <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>
                 {isDragOver ? "Drop files here" : "Drag & drop files here"}
@@ -301,16 +307,20 @@ function FileUploadItem({ progress }: FileUploadItemProps) {
       className={cn(
         "flex items-center gap-3 rounded-xl border p-3 transition-all duration-200",
         status === "error" ? "border-destructive/30 bg-destructive/5" : "",
-        status === "completed" ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20" : "",
+        status === "completed"
+          ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20"
+          : "",
         status === "uploading" || status === "pending" ? "bg-muted/30" : ""
       )}
     >
-      <div className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-        status === "completed" ? "bg-green-100 dark:bg-green-900/30" : "",
-        status === "error" ? "bg-destructive/10" : "",
-        status === "uploading" || status === "pending" ? "bg-muted" : ""
-      )}>
+      <div
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+          status === "completed" ? "bg-green-100 dark:bg-green-900/30" : "",
+          status === "error" ? "bg-destructive/10" : "",
+          status === "uploading" || status === "pending" ? "bg-muted" : ""
+        )}
+      >
         {statusIcon}
       </div>
 
@@ -327,10 +337,14 @@ function FileUploadItem({ progress }: FileUploadItemProps) {
 
         <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
           {status === "uploading" && (
-            <span className="tabular-nums">{formatFileSize(loaded)} / {formatFileSize(total)} ({percent}%)</span>
+            <span className="tabular-nums">
+              {formatFileSize(loaded)} / {formatFileSize(total)} ({percent}%)
+            </span>
           )}
           {status === "completed" && (
-            <span className="text-green-600 dark:text-green-400">{formatFileSize(total)} uploaded</span>
+            <span className="text-green-600 dark:text-green-400">
+              {formatFileSize(total)} uploaded
+            </span>
           )}
           {status === "pending" && <span>Waiting...</span>}
           {status === "error" && (
