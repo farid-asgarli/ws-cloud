@@ -64,8 +64,15 @@ public sealed partial class InputSanitizationMiddleware
             // Permissions policy (restrict potentially dangerous browser features)
             headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
 
-            // Content Security Policy (for any HTML the API may serve)
-            headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
+            // Content Security Policy
+            headers["Content-Security-Policy"] =
+                "default-src 'self'; "
+                + "script-src 'self'; "
+                + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                + "font-src 'self' https://fonts.gstatic.com; "
+                + "img-src 'self' data: blob:; "
+                + "connect-src 'self' wss: ws:; "
+                + "frame-ancestors 'none'";
 
             return Task.CompletedTask;
         });
