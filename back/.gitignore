@@ -43,6 +43,7 @@ mono_crash.*
 *.db-shm
 *.db-wal
 data/
+!**/Data/
 
 # Secrets
 secrets.json
