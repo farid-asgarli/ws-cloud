@@ -103,10 +103,14 @@ export function Layout() {
               <div className="bg-foreground text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm transition-transform duration-200 hover:scale-105">
                 <Cloud className="h-4 w-4" />
               </div>
-              <span className={cn(
-                "text-[15px] font-semibold tracking-tight transition-all duration-300",
-                sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-              )}>Cloud.File</span>
+              <span
+                className={cn(
+                  "text-[15px] font-semibold tracking-tight transition-all duration-300",
+                  sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                )}
+              >
+                Prism
+              </span>
             </div>
             <Button
               variant="ghost"
@@ -140,12 +144,19 @@ export function Layout() {
                       )}
                     >
                       <item.icon
-                        className={cn("h-4 w-4 shrink-0 transition-colors", isActive && "text-foreground")}
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-colors",
+                          isActive && "text-foreground"
+                        )}
                       />
-                      <span className={cn(
-                        "transition-all duration-300 whitespace-nowrap",
-                        sidebarCollapsed ? "w-0 overflow-hidden opacity-0" : "w-auto opacity-100"
-                      )}>{item.label}</span>
+                      <span
+                        className={cn(
+                          "whitespace-nowrap transition-all duration-300",
+                          sidebarCollapsed ? "w-0 overflow-hidden opacity-0" : "w-auto opacity-100"
+                        )}
+                      >
+                        {item.label}
+                      </span>
                     </Link>
                   </TooltipTrigger>
                   {sidebarCollapsed && (
@@ -160,10 +171,12 @@ export function Layout() {
 
           {/* Storage usage */}
           {stats && (
-            <div className={cn(
-              "mx-2 mb-2 rounded-xl border p-3 transition-all duration-300",
-              sidebarCollapsed ? "p-2" : "p-3"
-            )}>
+            <div
+              className={cn(
+                "mx-2 mb-2 rounded-xl border p-3 transition-all duration-300",
+                sidebarCollapsed ? "p-2" : "p-3"
+              )}
+            >
               {!sidebarCollapsed ? (
                 <>
                   <div className="mb-2.5 flex items-center gap-2 text-xs font-medium">
@@ -246,7 +259,9 @@ export function Layout() {
                     <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">
                       {(user?.displayName || "U").charAt(0).toUpperCase()}
                     </div>
-                    <span className="hidden text-sm font-medium sm:inline">{user?.displayName || "User"}</span>
+                    <span className="hidden text-sm font-medium sm:inline">
+                      {user?.displayName || "User"}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

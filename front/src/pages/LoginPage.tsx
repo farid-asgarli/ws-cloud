@@ -53,30 +53,21 @@ export function LoginPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
             <Cloud className="h-5 w-5" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Cloud.File</span>
+          <span className="text-lg font-semibold tracking-tight">Prism</span>
         </div>
 
         <div className="max-w-md">
           <p className="text-4xl leading-tight font-bold tracking-tight">
-            Your files,<br />everywhere.
+            Your workspace,
+            <br />
+            streamlined.
           </p>
           <p className="mt-4 text-base leading-relaxed opacity-60">
-            Secure cloud storage with instant access. Upload, organize, and share your files from
-            any device.
+            A unified platform to manage and access your resources securely from anywhere.
           </p>
-          <div className="mt-8 flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm opacity-70">
-              <Cloud className="h-3.5 w-3.5" />
-              <span>10 GB free storage</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm opacity-70">
-              <Eye className="h-3.5 w-3.5" />
-              <span>File previews</span>
-            </div>
-          </div>
         </div>
 
-        <p className="text-sm opacity-40">Protected by industry-standard encryption</p>
+        <p className="text-sm opacity-40">Secured with industry-standard encryption</p>
       </div>
 
       {/* Right panel — form */}
@@ -87,7 +78,7 @@ export function LoginPage() {
             <div className="bg-foreground flex h-9 w-9 items-center justify-center rounded-lg">
               <Cloud className="text-background h-4 w-4" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Cloud.File</span>
+            <span className="text-lg font-semibold tracking-tight">Prism</span>
           </div>
 
           <div className="mb-8">
