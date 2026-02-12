@@ -167,11 +167,11 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={handleBrowseClick}
         className={cn(
-          "relative cursor-pointer rounded-lg border-2 border-dashed transition-all duration-200",
-          compact ? "p-4" : "p-8",
+          "relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300",
+          compact ? "p-4" : "p-10",
           isDragOver
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-primary/50",
+            ? "border-primary bg-primary/5 scale-[1.01] shadow-lg"
+            : "border-muted-foreground/20 hover:border-primary/40 hover:bg-accent/30",
           disabled && "pointer-events-none opacity-50",
           isUploading && "pointer-events-none"
         )}
@@ -189,19 +189,35 @@ export function FileUpload({
         <div className="flex flex-col items-center justify-center text-center">
           {isUploading ? (
             <>
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground mt-2 text-sm">Uploading... {totalProgress}%</p>
+              <div className="bg-primary/10 mb-3 flex h-14 w-14 items-center justify-center rounded-2xl">
+                <Loader2 className="text-primary h-7 w-7 animate-spin" />
+              </div>
+              <p className="text-sm font-medium">Uploading...</p>
+              <p className="text-muted-foreground mt-1 text-xs tabular-nums">{totalProgress}% complete</p>
             </>
           ) : (
             <>
-              <Upload className={cn("text-muted-foreground", compact ? "h-6 w-6" : "h-10 w-10")} />
-              <p className={cn("text-muted-foreground mt-2", compact ? "text-xs" : "text-sm")}>
-                {isDragOver ? "Drop files here" : "Drag & drop files here, or click to browse"}
+              <div className={cn(
+                "bg-muted mb-3 flex items-center justify-center rounded-2xl transition-colors",
+                isDragOver ? "bg-primary/10" : "",
+                compact ? "h-10 w-10" : "h-14 w-14"
+              )}>
+                <Upload className={cn(
+                  "text-muted-foreground transition-colors",
+                  isDragOver && "text-primary",
+                  compact ? "h-5 w-5" : "h-6 w-6"
+                )} />
+              </div>
+              <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>
+                {isDragOver ? "Drop files here" : "Drag & drop files here"}
+              </p>
+              <p className={cn("text-muted-foreground mt-1", compact ? "text-[10px]" : "text-xs")}>
+                or <span className="text-primary font-medium">click to browse</span>
               </p>
               {!compact && (
-                <p className="text-muted-foreground/60 mt-1 text-xs">
+                <p className="text-muted-foreground/50 mt-2 text-[11px]">
                   {accept ? `Accepted: ${accept}` : "All file types accepted"}
-                  {maxSize && ` • Max size: ${formatFileSize(maxSize)}`}
+                  {maxSize && ` · Max size: ${formatFileSize(maxSize)}`}
                 </p>
               )}
             </>
@@ -210,8 +226,8 @@ export function FileUpload({
 
         {/* Overall progress bar during upload */}
         {isUploading && (
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-2">
-            <Progress value={totalProgress} />
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-3">
+            <Progress value={totalProgress} className="h-1.5" />
           </div>
         )}
       </div>
@@ -283,16 +299,24 @@ function FileUploadItem({ progress }: FileUploadItemProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border p-3 transition-colors",
-        status === "error" ? "border-destructive/50 bg-destructive/5" : "bg-muted/30"
+        "flex items-center gap-3 rounded-xl border p-3 transition-all duration-200",
+        status === "error" ? "border-destructive/30 bg-destructive/5" : "",
+        status === "completed" ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20" : "",
+        status === "uploading" || status === "pending" ? "bg-muted/30" : ""
       )}
     >
-      <File className="text-muted-foreground h-5 w-5 shrink-0" />
+      <div className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+        status === "completed" ? "bg-green-100 dark:bg-green-900/30" : "",
+        status === "error" ? "bg-destructive/10" : "",
+        status === "uploading" || status === "pending" ? "bg-muted" : ""
+      )}>
+        {statusIcon}
+      </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium">{fileName}</span>
-          {statusIcon}
         </div>
 
         {status === "uploading" && (
@@ -303,15 +327,10 @@ function FileUploadItem({ progress }: FileUploadItemProps) {
 
         <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
           {status === "uploading" && (
-            <>
-              <span>{formatFileSize(loaded)}</span>
-              <span>/</span>
-              <span>{formatFileSize(total)}</span>
-              <span>({percent}%)</span>
-            </>
+            <span className="tabular-nums">{formatFileSize(loaded)} / {formatFileSize(total)} ({percent}%)</span>
           )}
           {status === "completed" && (
-            <span className="text-green-600">{formatFileSize(total)} uploaded</span>
+            <span className="text-green-600 dark:text-green-400">{formatFileSize(total)} uploaded</span>
           )}
           {status === "pending" && <span>Waiting...</span>}
           {status === "error" && (

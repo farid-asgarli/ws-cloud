@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -12,86 +12,87 @@
 
 /* =============================================================================
    Default Theme (Neutral) - Light Mode
+   Clean, warm neutrals with subtle blue undertone for professionalism.
    ============================================================================= */
 :root {
-  --font-ui: system-ui, -apple-system, sans-serif;
-  --radius: 0.625rem;
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
+  --font-ui: "Inter", system-ui, -apple-system, sans-serif;
+  --radius: 0.5rem;
+  --background: 0 0% 99%;
+  --foreground: 240 10% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 9%;
+  --card-foreground: 240 10% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9%;
-  --primary: 0 0% 12%;
+  --popover-foreground: 240 10% 10%;
+  --primary: 240 6% 15%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 12%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 12%;
-  --destructive: 0 84% 60%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 6% 15%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 240 5% 96%;
+  --accent-foreground: 240 6% 15%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 0 0% 45%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 240 5% 65%;
   --chart-1: 24 75% 50%;
   --chart-2: 175 60% 45%;
   --chart-3: 220 50% 35%;
   --chart-4: 45 85% 55%;
   --chart-5: 35 80% 52%;
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 0 0% 9%;
-  --sidebar-primary: 0 0% 12%;
+  --sidebar: 240 5% 97.5%;
+  --sidebar-foreground: 240 10% 10%;
+  --sidebar-primary: 240 6% 15%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 96%;
-  --sidebar-accent-foreground: 0 0% 12%;
-  --sidebar-border: 0 0% 90%;
-  --sidebar-ring: 0 0% 45%;
+  --sidebar-accent: 240 5% 93%;
+  --sidebar-accent-foreground: 240 6% 15%;
+  --sidebar-border: 240 6% 90%;
+  --sidebar-ring: 240 5% 65%;
 }
 
 /* =============================================================================
    Default Theme (Neutral) - Dark Mode
    ============================================================================= */
 .dark {
-  --background: 0 0% 9%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 12%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 12%;
-  --popover-foreground: 0 0% 98%;
+  --background: 240 6% 7%;
+  --foreground: 0 0% 95%;
+  --card: 240 5% 10%;
+  --card-foreground: 0 0% 95%;
+  --popover: 240 5% 10%;
+  --popover-foreground: 0 0% 95%;
   --primary: 0 0% 90%;
-  --primary-foreground: 0 0% 12%;
-  --secondary: 0 0% 17%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 17%;
-  --muted-foreground: 0 0% 55%;
-  --accent: 0 0% 17%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 70% 50%;
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --ring: 0 0% 45%;
+  --primary-foreground: 240 6% 10%;
+  --secondary: 240 4% 16%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 240 4% 16%;
+  --muted-foreground: 240 5% 55%;
+  --accent: 240 4% 16%;
+  --accent-foreground: 0 0% 95%;
+  --destructive: 0 63% 51%;
+  --border: 240 4% 18%;
+  --input: 240 4% 18%;
+  --ring: 240 5% 50%;
   --chart-1: 260 70% 55%;
   --chart-2: 160 60% 50%;
   --chart-3: 35 80% 52%;
   --chart-4: 280 75% 55%;
   --chart-5: 10 80% 50%;
-  --sidebar: 0 0% 12%;
-  --sidebar-foreground: 0 0% 98%;
+  --sidebar: 240 5% 9%;
+  --sidebar-foreground: 0 0% 95%;
   --sidebar-primary: 0 0% 90%;
-  --sidebar-primary-foreground: 0 0% 12%;
-  --sidebar-accent: 0 0% 17%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 0 0% 45%;
+  --sidebar-primary-foreground: 240 6% 10%;
+  --sidebar-accent: 240 4% 14%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 240 4% 18%;
+  --sidebar-ring: 240 5% 50%;
 }
 
 /* =============================================================================
    Blue Theme - Light Mode
    Professional blue palette inspired by shadcn blue
    ============================================================================= */
-[data-color-theme='blue'] {
+[data-color-theme="blue"] {
   --primary: 221 83% 53%;
   --primary-foreground: 210 40% 98%;
   --secondary: 210 40% 96%;
@@ -114,10 +115,10 @@
 /* =============================================================================
    Blue Theme - Dark Mode
    ============================================================================= */
-.dark[data-color-theme='blue'],
-[data-color-theme='blue'].dark,
-[data-color-theme='blue'] .dark,
-.dark [data-color-theme='blue'] {
+.dark[data-color-theme="blue"],
+[data-color-theme="blue"].dark,
+[data-color-theme="blue"] .dark,
+.dark [data-color-theme="blue"] {
   --primary: 217 91% 60%;
   --primary-foreground: 222 47% 11%;
   --secondary: 217 33% 17%;
@@ -141,7 +142,7 @@
    Rose Theme - Light Mode
    Elegant rose/pink palette inspired by shadcn rose
    ============================================================================= */
-[data-color-theme='rose'] {
+[data-color-theme="rose"] {
   --primary: 346 77% 50%;
   --primary-foreground: 355 100% 97%;
   --secondary: 346 50% 96%;
@@ -164,10 +165,10 @@
 /* =============================================================================
    Rose Theme - Dark Mode
    ============================================================================= */
-.dark[data-color-theme='rose'],
-[data-color-theme='rose'].dark,
-[data-color-theme='rose'] .dark,
-.dark [data-color-theme='rose'] {
+.dark[data-color-theme="rose"],
+[data-color-theme="rose"].dark,
+[data-color-theme="rose"] .dark,
+.dark [data-color-theme="rose"] {
   --primary: 346 77% 60%;
   --primary-foreground: 346 30% 10%;
   --secondary: 346 30% 17%;
@@ -191,7 +192,7 @@
    Green Theme - Light Mode
    Fresh green palette inspired by shadcn green
    ============================================================================= */
-[data-color-theme='green'] {
+[data-color-theme="green"] {
   --primary: 142 76% 36%;
   --primary-foreground: 138 76% 97%;
   --secondary: 138 40% 96%;
@@ -214,10 +215,10 @@
 /* =============================================================================
    Green Theme - Dark Mode
    ============================================================================= */
-.dark[data-color-theme='green'],
-[data-color-theme='green'].dark,
-[data-color-theme='green'] .dark,
-.dark [data-color-theme='green'] {
+.dark[data-color-theme="green"],
+[data-color-theme="green"].dark,
+[data-color-theme="green"] .dark,
+.dark [data-color-theme="green"] {
   --primary: 142 70% 45%;
   --primary-foreground: 142 40% 10%;
   --secondary: 142 30% 17%;
@@ -241,7 +242,7 @@
    Orange Theme - Light Mode
    Warm orange palette inspired by shadcn orange
    ============================================================================= */
-[data-color-theme='orange'] {
+[data-color-theme="orange"] {
   --primary: 24 95% 53%;
   --primary-foreground: 24 95% 97%;
   --secondary: 24 50% 96%;
@@ -264,10 +265,10 @@
 /* =============================================================================
    Orange Theme - Dark Mode
    ============================================================================= */
-.dark[data-color-theme='orange'],
-[data-color-theme='orange'].dark,
-[data-color-theme='orange'] .dark,
-.dark [data-color-theme='orange'] {
+.dark[data-color-theme="orange"],
+[data-color-theme="orange"].dark,
+[data-color-theme="orange"] .dark,
+.dark [data-color-theme="orange"] {
   --primary: 20 90% 48%;
   --primary-foreground: 24 40% 10%;
   --secondary: 24 30% 17%;
@@ -337,15 +338,18 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
+      "rlig" 1,
+      "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
@@ -355,23 +359,23 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-color: hsl(var(--muted-foreground) / 0.2);
     border-radius: 3px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: hsl(var(--muted-foreground) / 0.35);
   }
 }
 
 /* Selection highlight styles */
 ::selection {
-  background-color: hsl(var(--primary) / 0.2);
+  background-color: hsl(var(--primary) / 0.15);
   color: inherit;
 }
 
 /* Focus visible improvements */
 :focus-visible {
-  outline: 2px solid hsl(var(--primary) / 0.5);
+  outline: 2px solid hsl(var(--ring) / 0.5);
   outline-offset: 2px;
 }
 
@@ -383,16 +387,53 @@
 /* Keyboard shortcut badge styling */
 kbd {
   font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75em;
+  font-size: 0.7em;
   font-weight: 500;
   line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
 }
 
-/* Button hover glow effect */
-button[class*='from-primary']:hover {
-  box-shadow:
-    0 4px 6px -1px hsl(var(--primary) / 0.2),
-    0 2px 4px -2px hsl(var(--primary) / 0.15);
+/* Smooth card & button hover transitions */
+button,
+a,
+[role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Better dialog backdrop */
+[data-state="open"][role="dialog"] {
+  animation: dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Progress bar animation */
+[role="progressbar"] > div {
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Drag ghost styling */
+[draggable="true"] {
+  -webkit-user-drag: element;
+  cursor: grab;
+}
+[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 /* Respect user preference for reduced motion */

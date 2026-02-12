@@ -228,7 +228,7 @@ export function SearchPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Search Header */}
-      <div className="border-b p-4">
+      <div className="border-b px-4 py-4">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -238,7 +238,7 @@ export function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="pr-10 pl-10"
+              className="h-10 rounded-lg pr-10 pl-9 text-sm"
               autoFocus
             />
             {query && (
@@ -248,12 +248,17 @@ export function SearchPage() {
                 className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
                 onClick={() => setQuery("")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
-          <Button onClick={performSearch} disabled={loading || !query.trim()}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          <Button
+            size="sm"
+            className="h-10 gap-2 px-4 text-sm"
+            onClick={performSearch}
+            disabled={loading || !query.trim()}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             Search
           </Button>
           <Popover open={showFilters} onOpenChange={setShowFilters}>
@@ -261,27 +266,32 @@ export function SearchPage() {
               <Button
                 variant={hasActiveFilters ? "secondary" : "outline"}
                 size="icon"
-                className="relative"
+                className="relative h-9 w-9"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className="h-3.5 w-3.5" />
                 {hasActiveFilters && (
-                  <span className="bg-primary absolute -top-1 -right-1 h-2 w-2 rounded-full" />
+                  <span className="bg-foreground absolute -top-1 -right-1 h-2 w-2 rounded-full" />
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="space-y-4">
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Filters</h4>
+                  <h4 className="text-[13px] font-medium">Filters</h4>
                   {hasActiveFilters && (
-                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={clearFilters}
+                    >
                       Clear all
                     </Button>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label>File type</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">File type</Label>
                   <Select value={fileType} onValueChange={setFileType}>
                     <SelectTrigger>
                       <SelectValue placeholder="All types" />
@@ -296,8 +306,8 @@ export function SearchPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>File size</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">File size</Label>
                   <Select value={sizeFilter} onValueChange={setSizeFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Any size" />
@@ -312,8 +322,8 @@ export function SearchPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Modified</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Modified</Label>
                   <Select value={dateFilter} onValueChange={setDateFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Any time" />
@@ -329,7 +339,7 @@ export function SearchPage() {
                 </div>
 
                 <Button
-                  className="w-full"
+                  className="h-8 w-full text-xs"
                   onClick={() => {
                     setShowFilters(false);
                     performSearch();
@@ -345,44 +355,44 @@ export function SearchPage() {
 
         {/* Active filter chips */}
         {hasActiveFilters && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {fileType && (
-              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-full px-3 py-1 text-sm">
+              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2.5 py-1 text-xs">
                 Type: {fileTypeOptions.find((o) => o.value === fileType)?.label}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="ml-1 h-4 w-4 p-0"
+                  className="ml-0.5 h-3.5 w-3.5 p-0"
                   onClick={() => setFileType("")}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </Button>
               </div>
             )}
             {sizeFilter && (
-              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-full px-3 py-1 text-sm">
+              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2.5 py-1 text-xs">
                 Size: {sizeOptions.find((o) => o.value === sizeFilter)?.label}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="ml-1 h-4 w-4 p-0"
+                  className="ml-0.5 h-3.5 w-3.5 p-0"
                   onClick={() => setSizeFilter("")}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </Button>
               </div>
             )}
             {dateFilter && (
-              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-full px-3 py-1 text-sm">
-                <Calendar className="h-3 w-3" />
+              <div className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2.5 py-1 text-xs">
+                <Calendar className="h-2.5 w-2.5" />
                 {dateOptions.find((o) => o.value === dateFilter)?.label}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="ml-1 h-4 w-4 p-0"
+                  className="ml-0.5 h-3.5 w-3.5 p-0"
                   onClick={() => setDateFilter("")}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </Button>
               </div>
             )}
@@ -393,47 +403,63 @@ export function SearchPage() {
       {/* Results */}
       <ScrollArea className="flex-1">
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
+          <div className="flex h-64 flex-col items-center justify-center gap-3">
             <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground text-sm">Searching...</p>
           </div>
         ) : !hasSearched ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-2">
-            <Search className="text-muted-foreground h-12 w-12" />
-            <p className="text-muted-foreground">Enter a search term to find files and folders</p>
+          <div className="flex h-80 flex-col items-center justify-center gap-4">
+            <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-3xl">
+              <Search className="text-muted-foreground h-9 w-9" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold tracking-tight">Search your files</p>
+              <p className="text-muted-foreground mt-1.5 max-w-xs text-sm">
+                Enter a search term to find files and folders across your storage
+              </p>
+            </div>
           </div>
         ) : results && results.items.length > 0 ? (
           <div className="p-4">
-            <p className="text-muted-foreground mb-4 text-sm">
-              Found {results.totalCount} result{results.totalCount !== 1 ? "s" : ""} for "
-              {results.query}"
+            <p className="text-muted-foreground mb-4 text-xs font-medium">
+              Found <span className="text-foreground font-semibold">{results.totalCount}</span> result{results.totalCount !== 1 ? "s" : ""} for “{results.query}”
             </p>
             <div className="space-y-1">
               {results.items.map((item) => (
                 <div
                   key={item.id}
                   className={cn(
-                    "hover:bg-accent flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+                    "flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+                    "hover:bg-accent/70 hover:shadow-sm"
                   )}
                   onClick={() => handleItemClick(item)}
                 >
-                  {getItemIcon(item)}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.name}</p>
-                    <p className="text-muted-foreground truncate text-sm">{item.path}</p>
+                  <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                    {getItemIcon(item)}
                   </div>
-                  <div className="text-muted-foreground text-right text-sm">
-                    <p>{item.type === "folder" ? "Folder" : formatFileSize(item.size)}</p>
-                    <p className="text-xs">{formatDate(item.modifiedAt)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-muted-foreground truncate text-[11px]">{item.path}</p>
+                  </div>
+                  <div className="text-muted-foreground text-right text-[12px]">
+                    <p className="font-medium">{item.type === "folder" ? "Folder" : formatFileSize(item.size)}</p>
+                    <p className="text-[11px]">{formatDate(item.modifiedAt)}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="flex h-64 flex-col items-center justify-center gap-2">
-            <Search className="text-muted-foreground h-12 w-12" />
-            <p className="text-muted-foreground">No results found for "{query}"</p>
-            <p className="text-muted-foreground text-sm">Try adjusting your search or filters</p>
+          <div className="flex h-80 flex-col items-center justify-center gap-4">
+            <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-3xl">
+              <Search className="text-muted-foreground h-9 w-9" />
+            </div>
+            <div className="text-center">
+              <p className="text-foreground text-lg font-semibold">No results found</p>
+              <p className="text-muted-foreground mt-1.5 max-w-xs text-sm">
+                Try adjusting your search term or filters to find what you're looking for
+              </p>
+            </div>
           </div>
         )}
       </ScrollArea>

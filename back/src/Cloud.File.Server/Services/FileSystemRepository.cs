@@ -915,6 +915,37 @@ public sealed class FileSystemRepository : IFileSystemRepository
         _logger.LogInformation("Emptied trash for user {UserId}", CurrentUserId);
     }
 
+    public async Task<FileSystemNode[]> GetDescendantsAsync(
+        Guid folderId,
+        NodeType? typeFilter = null,
+        CancellationToken ct = default
+    )
+    {
+        var userId = CurrentUserId;
+
+        // Use VirtualPath prefix matching for efficient recursive query
+        var folder = await _db
+            .FileSystemNodes.Where(n => n.Id == folderId && n.UserId == userId && !n.IsDeleted)
+            .FirstOrDefaultAsync(ct);
+
+        if (folder is null || folder.Type != NodeType.Folder)
+            return [];
+
+        var pathPrefix = folder.VirtualPath == "/" ? "/" : folder.VirtualPath + "/";
+
+        var query = _db.FileSystemNodes.Where(n =>
+            n.UserId == userId
+            && !n.IsDeleted
+            && n.Id != folderId
+            && n.VirtualPath.StartsWith(pathPrefix)
+        );
+
+        if (typeFilter.HasValue)
+            query = query.Where(n => n.Type == typeFilter.Value);
+
+        return await query.OrderBy(n => n.VirtualPath).ToArrayAsync(ct);
+    }
+
     public async Task<SearchResultDto> SearchAsync(
         string query,
         string? fileType = null,
@@ -1037,6 +1068,73 @@ public sealed class FileSystemRepository : IFileSystemRepository
             Items = items,
             TotalCount = items.Length,
         };
+    }
+
+    public async Task RecordFileAccessAsync(
+        Guid fileId,
+        string accessType,
+        CancellationToken ct = default
+    )
+    {
+        var userId = CurrentUserId;
+
+        var log = new FileAccessLog
+        {
+            Id = Guid.NewGuid(),
+            FileId = fileId,
+            UserId = userId,
+            AccessedAt = DateTimeOffset.UtcNow,
+            AccessType = accessType,
+        };
+
+        _db.FileAccessLogs.Add(log);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<RecentFilesListingDto> GetRecentFilesAsync(
+        int limit = 50,
+        CancellationToken ct = default
+    )
+    {
+        var userId = CurrentUserId;
+        var clampedLimit = Math.Clamp(limit, 1, 200);
+
+        // Get the most recent access per file (distinct files, most recent first)
+        var recentItems = await _db
+            .FileAccessLogs.Where(a => a.UserId == userId)
+            .GroupBy(a => a.FileId)
+            .Select(g => new
+            {
+                FileId = g.Key,
+                AccessedAt = g.Max(a => a.AccessedAt),
+                AccessType = g.OrderByDescending(a => a.AccessedAt).First().AccessType,
+            })
+            .OrderByDescending(x => x.AccessedAt)
+            .Take(clampedLimit)
+            .Join(
+                _db.FileSystemNodes.Where(n => n.UserId == userId && !n.IsDeleted),
+                access => access.FileId,
+                node => node.Id,
+                (access, node) =>
+                    new RecentFileDto
+                    {
+                        Id = node.Id,
+                        Name = node.Name,
+                        Path = node.VirtualPath,
+                        Type = node.Type == NodeType.Folder ? "folder" : "file",
+                        Size = node.Size,
+                        MimeType = node.MimeType,
+                        CreatedAt = node.CreatedAt,
+                        ModifiedAt = node.ModifiedAt,
+                        AccessedAt = access.AccessedAt,
+                        AccessType = access.AccessType,
+                        ParentId = node.ParentId,
+                    }
+            )
+            .OrderByDescending(x => x.AccessedAt)
+            .ToArrayAsync(ct);
+
+        return new RecentFilesListingDto { Items = recentItems, TotalCount = recentItems.Length };
     }
 
     public string NormalizePath(string path)

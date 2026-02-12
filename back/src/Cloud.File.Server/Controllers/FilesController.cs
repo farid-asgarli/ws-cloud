@@ -1,3 +1,4 @@
+using Cloud.File.Server.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,11 +15,20 @@ public class FilesController : ControllerBase
 {
     private readonly IFileSystemService _fileSystem;
     private readonly ILogger<FilesController> _logger;
+    private readonly FileTypeRestrictions _fileTypeRestrictions;
+    private readonly IFileScanService _fileScanService;
 
-    public FilesController(IFileSystemService fileSystem, ILogger<FilesController> logger)
+    public FilesController(
+        IFileSystemService fileSystem,
+        ILogger<FilesController> logger,
+        FileTypeRestrictions fileTypeRestrictions,
+        IFileScanService fileScanService
+    )
     {
         _fileSystem = fileSystem;
         _logger = logger;
+        _fileTypeRestrictions = fileTypeRestrictions;
+        _fileScanService = fileScanService;
     }
 
     /// <summary>
@@ -31,6 +41,24 @@ public class FilesController : ControllerBase
         if (file == null || file.Length == 0)
         {
             return BadRequest("No file provided");
+        }
+
+        // Validate file type restrictions
+        var typeError = _fileTypeRestrictions.Validate(file.FileName, file.Length);
+        if (typeError != null)
+            return BadRequest(new { error = typeError });
+
+        // Scan file for malware
+        await using var scanStream = file.OpenReadStream();
+        var scanResult = await _fileScanService.ScanAsync(scanStream, file.FileName);
+        if (!scanResult.IsSafe)
+        {
+            _logger.LogWarning(
+                "File rejected by scan: {FileName} - {Threat}",
+                file.FileName,
+                scanResult.ThreatName
+            );
+            return BadRequest(new { error = $"File rejected: {scanResult.Details}" });
         }
 
         if (string.IsNullOrWhiteSpace(path))
@@ -62,6 +90,33 @@ public class FilesController : ControllerBase
 
         foreach (var file in files)
         {
+            // Validate file type restrictions
+            var typeError = _fileTypeRestrictions.Validate(file.FileName, file.Length);
+            if (typeError != null)
+            {
+                _logger.LogWarning(
+                    "File rejected by type restriction: {FileName} - {Error}",
+                    file.FileName,
+                    typeError
+                );
+                continue;
+            }
+
+            // Scan file for malware
+            await using (var scanStream = file.OpenReadStream())
+            {
+                var scanResult = await _fileScanService.ScanAsync(scanStream, file.FileName);
+                if (!scanResult.IsSafe)
+                {
+                    _logger.LogWarning(
+                        "File rejected by scan: {FileName} - {Threat}",
+                        file.FileName,
+                        scanResult.ThreatName
+                    );
+                    continue;
+                }
+            }
+
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
 

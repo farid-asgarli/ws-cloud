@@ -219,14 +219,14 @@ export function FolderPickerDialog({
           ) : (
             <Folder className="h-4 w-4 text-amber-500" />
           )}
-          <span className="ml-1 truncate text-sm">{treeNode.node.name}</span>
+          <span className="ml-1 truncate text-[13px]">{treeNode.node.name}</span>
         </div>
         {treeNode.expanded && treeNode.children.length > 0 && (
           <div>{renderFolderTree(treeNode.children, level + 1)}</div>
         )}
         {treeNode.expanded && treeNode.loaded && treeNode.children.length === 0 && (
           <div
-            className="text-muted-foreground px-2 py-1 text-xs italic"
+            className="text-muted-foreground px-2 py-1 text-[11px] italic"
             style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }}
           >
             No subfolders
@@ -238,23 +238,24 @@ export function FolderPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle className="text-base">{title}</DialogTitle>
+          <DialogDescription className="text-[13px]">{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           {/* Current destination display */}
-          <div className="text-sm">
+          <div className="bg-muted/50 flex items-center gap-2 rounded-lg px-3 py-2 text-[13px]">
+            <Folder className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
             <span className="text-muted-foreground">Destination: </span>
-            <span className="font-medium">{selectedPath}</span>
+            <span className="font-semibold">{selectedPath}</span>
           </div>
 
           {/* Folder tree */}
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border">
             <ScrollArea className="h-75">
-              <div className="p-2">
+              <div className="p-1.5">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
@@ -264,7 +265,7 @@ export function FolderPickerDialog({
                     {/* Root option */}
                     <div
                       className={cn(
-                        "hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5",
+                        "hover:bg-accent flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2",
                         selectedFolderId === null && "bg-accent"
                       )}
                       onClick={() => handleSelectFolder(null)}
@@ -276,7 +277,7 @@ export function FolderPickerDialog({
                     {rootFolders.length > 0 ? (
                       renderFolderTree(rootFolders)
                     ) : (
-                      <div className="text-muted-foreground py-4 text-center text-sm">
+                      <div className="text-muted-foreground py-4 text-center text-[13px]">
                         No folders available
                       </div>
                     )}
@@ -288,11 +289,11 @@ export function FolderPickerDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={confirming}>
-            {confirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button size="sm" className="h-9" onClick={handleConfirm} disabled={confirming}>
+            {confirming && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
             {confirmLabel}
           </Button>
         </DialogFooter>

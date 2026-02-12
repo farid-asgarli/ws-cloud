@@ -8,10 +8,9 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Cloud,
   FolderOpen,
-  Home,
+  Clock,
   HardDrive,
   Moon,
-  Settings,
   Sun,
   Trash2,
   ChevronLeft,
@@ -50,7 +49,8 @@ type ColorTheme = "neutral" | "blue" | "rose" | "green" | "orange";
 const navItems = [
   { path: "/files", label: "My Files", icon: FolderOpen },
   { path: "/search", label: "Search", icon: Search },
-  { path: "/recent", label: "Recent", icon: Home },
+  { path: "/storage", label: "Storage", icon: HardDrive },
+  { path: "/recent", label: "Recent", icon: Clock },
   { path: "/trash", label: "Trash", icon: Trash2 },
 ];
 
@@ -93,32 +93,37 @@ export function Layout() {
         {/* Sidebar */}
         <aside
           className={cn(
-            "flex flex-col border-r transition-all duration-300",
-            sidebarCollapsed ? "w-16" : "w-64"
+            "bg-sidebar flex flex-col border-r transition-all duration-300 ease-in-out",
+            sidebarCollapsed ? "w-15" : "w-60"
           )}
         >
           {/* Logo */}
-          <div className="flex h-14 items-center justify-between border-b px-4">
-            <div className="flex items-center gap-2">
-              <Cloud className="text-primary h-6 w-6 shrink-0" />
-              {!sidebarCollapsed && <span className="text-lg font-semibold">Cloud.File</span>}
+          <div className="flex h-14 items-center justify-between px-3">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="bg-foreground text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm transition-transform duration-200 hover:scale-105">
+                <Cloud className="h-4 w-4" />
+              </div>
+              <span className={cn(
+                "text-[15px] font-semibold tracking-tight transition-all duration-300",
+                sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+              )}>Cloud.File</span>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0 transition-transform duration-200 hover:scale-105"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               {sidebarCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5" />
               ) : (
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-2">
+          <nav className="flex-1 space-y-0.5 px-2 pt-2">
             {navItems.map((item) => {
               const isActive =
                 location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
@@ -128,18 +133,23 @@ export function Layout() {
                     <Link
                       to={item.path}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+                        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all duration-200",
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          ? "bg-accent text-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                       )}
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      {!sidebarCollapsed && <span>{item.label}</span>}
+                      <item.icon
+                        className={cn("h-4 w-4 shrink-0 transition-colors", isActive && "text-foreground")}
+                      />
+                      <span className={cn(
+                        "transition-all duration-300 whitespace-nowrap",
+                        sidebarCollapsed ? "w-0 overflow-hidden opacity-0" : "w-auto opacity-100"
+                      )}>{item.label}</span>
                     </Link>
                   </TooltipTrigger>
                   {sidebarCollapsed && (
-                    <TooltipContent side="right">
+                    <TooltipContent side="right" sideOffset={8}>
                       <p>{item.label}</p>
                     </TooltipContent>
                   )}
@@ -149,26 +159,41 @@ export function Layout() {
           </nav>
 
           {/* Storage usage */}
-          {stats && !sidebarCollapsed && (
-            <div className="border-t p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm">
-                <HardDrive className="text-muted-foreground h-4 w-4" />
-                <span className="text-muted-foreground">Storage</span>
-              </div>
-              <div className="bg-muted mb-2 h-2 overflow-hidden rounded-full">
-                <div
-                  className="bg-primary h-full transition-all"
-                  style={{
-                    width: `${Math.min((stats.totalSize / (10 * 1024 * 1024 * 1024)) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {formatFileSize(stats.totalSize)} used
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {stats.totalFiles} files • {stats.totalFolders} folders
-              </p>
+          {stats && (
+            <div className={cn(
+              "mx-2 mb-2 rounded-xl border p-3 transition-all duration-300",
+              sidebarCollapsed ? "p-2" : "p-3"
+            )}>
+              {!sidebarCollapsed ? (
+                <>
+                  <div className="mb-2.5 flex items-center gap-2 text-xs font-medium">
+                    <HardDrive className="text-muted-foreground h-3.5 w-3.5" />
+                    <span className="text-muted-foreground">Storage</span>
+                  </div>
+                  <div className="bg-secondary mb-2 h-1.5 overflow-hidden rounded-full">
+                    <div
+                      className="bg-foreground/70 h-full rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.min((stats.totalSize / (10 * 1024 * 1024 * 1024)) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-[11px]">
+                    {formatFileSize(stats.totalSize)} of 10 GB used
+                  </p>
+                </>
+              ) : (
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <div className="flex justify-center">
+                      <HardDrive className="text-muted-foreground h-4 w-4" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    <p>{formatFileSize(stats.totalSize)} of 10 GB used</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           )}
         </aside>
@@ -179,15 +204,15 @@ export function Layout() {
           <header className="flex h-14 items-center justify-between border-b px-4">
             <div className="flex items-center gap-2">
               {/* Mobile menu button */}
-              <Button variant="ghost" size="icon" className="lg:hidden">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
+                <Menu className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
               {/* Theme Selector */}
               <Select value={colorTheme} onValueChange={(v) => handleThemeChange(v as ColorTheme)}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="h-8 w-28 text-xs">
                   <SelectValue placeholder="Theme" />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,8 +227,8 @@ export function Layout() {
               {/* Dark Mode Toggle */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
-                    {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode}>
+                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -211,23 +236,17 @@ export function Layout() {
                 </TooltipContent>
               </Tooltip>
 
-              {/* Settings */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Settings</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Divider */}
+              <div className="bg-border mx-1 h-5 w-px" />
 
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" size="sm" className="h-8 gap-2 px-2">
+                    <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">
+                      {(user?.displayName || "U").charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden text-sm font-medium sm:inline">{user?.displayName || "User"}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

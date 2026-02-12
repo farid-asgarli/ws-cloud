@@ -98,33 +98,49 @@ public async Task<IActionResult> Search(
 - Multi-select support for bulk copy/move operations
 - Visual feedback during drag operations
 
-### **7. File Preview** (Not Implemented)
+### **7. File Preview** ✅ IMPLEMENTED
 
-- ❌ No preview for images, PDFs, videos, text files
-- ❌ No thumbnail generation
-- ❌ No inline viewer modal
+- ✅ Inline preview for images, videos, audio, PDFs, and text/code files
+- ✅ Image thumbnails in grid view
+- ✅ Inline viewer modal with fullscreen toggle
 
-**Required:**
+**Implementation Details:**
 
-- Backend: Image resizing/thumbnail endpoints
-- Backend: Text file content streaming
-- Frontend: Preview modal component
+- Backend: `GET /api/browser/preview/{id}` serves files with `Content-Disposition: inline`
+- Backend: `GET /api/browser/preview/{id}/text` returns text file content with language detection
+- Frontend: `FilePreviewModal` component with type-specific renderers
+- Frontend: `ImageThumbnail` component for grid view thumbnails
+- Supported preview types: images, videos, audio, PDFs, text/code (50+ extensions)
+- Text preview includes line numbers, language badge, and truncation handling
+- Double-click on files opens preview; context menus include Preview and Download options
+- Preview modal includes download button, fullscreen toggle, and file info header
 
-### **8. Folder Operations**
+### **8. Folder Operations** ✅ IMPLEMENTED
 
-- ❌ Cannot download folder as ZIP
-- ❌ Cannot upload folder structures (drag & drop folder)
-- ❌ No recursive folder operations UI
+- ✅ Download folder as ZIP
+- ✅ Upload folder structures (drag & drop folder)
+- ✅ Recursive folder operations UI
+
+**Implementation Details:**
+
+- Backend: `GET /api/browser/download/{id}/zip` streams folder as ZIP archive
+- Backend: `POST /api/browser/upload/folder` accepts files with relative paths, auto-creates folder hierarchy
+- Backend: `GetDescendantsAsync` repository method for efficient recursive file retrieval via path prefix matching
+- Frontend: "Upload Folder" button with `webkitdirectory` support
+- Frontend: Drag & drop folder support using `webkitGetAsEntry()` API with recursive directory traversal
+- Frontend: "Download as ZIP" option in context menus and dropdown menus for folders
+- ZIP streaming directly to response without disk buffering
+- Folder uploads preserve full directory structure with relative paths
 
 ## 🟢 **Minor Missing Features**
 
-### **9. User Experience**
+### **9. User Experience** ✅ IMPLEMENTED
 
-- ❌ No breadcrumb keyboard navigation
-- ❌ No file/folder properties modal (created, modified, size, path)
-- ❌ No multi-file progress tracking UI
-- ❌ No storage usage dashboard
-- ❌ No keyboard shortcuts help modal
+- ✅ Breadcrumb keyboard navigation (Arrow keys, Home, End, Enter)
+- ✅ File/folder properties modal (name, type, size, path, created, modified, MIME type, ID)
+- ✅ Multi-file progress tracking UI (floating panel with per-file progress, cancel, dismiss)
+- ✅ Storage usage dashboard (dedicated page with stats cards, usage bar, breakdown, tips)
+- ✅ Keyboard shortcuts help modal (press `?` to open, categorized shortcut list)
 
 ### **10. Advanced Features**
 
@@ -143,13 +159,22 @@ public async Task<IActionResult> Search(
 - ❌ No system health monitoring
 - ❌ No rate limiting
 
-### **12. Security**
+### **12. Security** ✅ IMPLEMENTED
 
-- ❌ No file scanning for malware
-- ❌ No file type restrictions
-- ❌ No request rate limiting
-- ❌ No CORS configuration for production
-- ❌ No input sanitization middleware
+- ✅ File scanning integration point (IFileScanService interface with NoOp default, swap in ClamAV/VirusTotal)
+- ✅ File type restrictions (blocked dangerous extensions: .exe, .dll, .bat, .cmd, etc., configurable allow/block lists)
+- ✅ Request rate limiting (sliding-window per-IP, configurable limits for auth/upload/general endpoints)
+- ✅ CORS configuration for production (configurable origins via appsettings.json, dev/prod separation)
+- ✅ Input sanitization middleware (XSS/SQL injection detection, header injection prevention, security headers)
+
+**Implementation Details:**
+
+- `FileTypeRestrictions`: Configurable allow/blocklist with 40+ default dangerous extensions, max file size, double-extension detection
+- `RateLimitingMiddleware`: Sliding window per client IP, 200 req/min general, 10 req/min auth, 50 req/min uploads, 429 responses with Retry-After
+- `InputSanitizationMiddleware`: Script tag detection, SQL injection patterns, null byte injection, header newline injection, security response headers (X-Content-Type-Options, X-Frame-Options, CSP, Permissions-Policy)
+- `IFileScanService` / `NoOpFileScanService`: Ready-to-swap interface for antivirus integration
+- CORS origins configurable in `Security:CorsOrigins` array, defaults to localhost in development
+- Rate limiting disabled in development (`appsettings.Development.json`)
 
 ### **13. Performance**
 
@@ -175,17 +200,17 @@ public async Task<IActionResult> Search(
 
 ## 📊 **Implementation Status Summary**
 
-| Component                | Implemented | Missing           |
-| ------------------------ | ----------- | ----------------- |
-| **Core File Operations** | ✅ 100%     | -                 |
-| **Upload/Download**      | ✅ 100%     | Folder operations |
-| **Database Layer**       | ✅ 100%     | -                 |
-| **Authentication**       | ✅ 100%     | -                 |
-| **Search**               | ✅ 100%     | -                 |
-| **Trash**                | ✅ 100%     | -                 |
-| **Recent Files**         | ❌ 0%       | Everything        |
-| **File Preview**         | ❌ 0%       | Everything        |
-| **Admin Panel**          | ❌ 0%       | Everything        |
+| Component                | Implemented | Missing    |
+| ------------------------ | ----------- | ---------- |
+| **Core File Operations** | ✅ 100%     | -          |
+| **Upload/Download**      | ✅ 100%     | -          |
+| **Database Layer**       | ✅ 100%     | -          |
+| **Authentication**       | ✅ 100%     | -          |
+| **Search**               | ✅ 100%     | -          |
+| **Trash**                | ✅ 100%     | -          |
+| **Recent Files**         | ❌ 0%       | Everything |
+| **File Preview**         | ✅ 100%     | -          |
+| **Admin Panel**          | ❌ 0%       | Everything |
 
 ## 🎯 **Recommended Implementation Priority**
 
@@ -195,7 +220,7 @@ public async Task<IActionResult> Search(
 2. ~~Trash restore functionality~~ ✅ DONE
 3. ~~File search~~ ✅ DONE
 
-**Phase 2 (High Value):** 4. File preview & thumbnails 5. ~~Copy/Move UI with folder picker~~ ✅ DONE 6. Recent files
+**Phase 2 (High Value):** 4. ~~File preview & thumbnails~~ ✅ DONE 5. ~~Copy/Move UI with folder picker~~ ✅ DONE 6. Recent files
 
 **Phase 3 (Production Ready):** 7. Docker containerization 8. HTTPS & production config 9. Rate limiting 10. Basic admin panel
 

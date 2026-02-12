@@ -58,6 +58,16 @@ public interface IFileSystemRepository
     Task PermanentDeleteAsync(Guid[] itemIds, CancellationToken ct = default);
     Task EmptyTrashAsync(CancellationToken ct = default);
 
+    // Recursive operations
+    /// <summary>
+    /// Get all descendant nodes of a folder (files and subfolders), recursively.
+    /// </summary>
+    Task<FileSystemNode[]> GetDescendantsAsync(
+        Guid folderId,
+        NodeType? typeFilter = null,
+        CancellationToken ct = default
+    );
+
     // Search operations
     Task<SearchResultDto> SearchAsync(
         string query,
@@ -68,6 +78,18 @@ public interface IFileSystemRepository
         long? maxSize = null,
         CancellationToken ct = default
     );
+
+    // Recent files operations
+    /// <summary>
+    /// Record a file access event (download, preview, etc.).
+    /// </summary>
+    Task RecordFileAccessAsync(Guid fileId, string accessType, CancellationToken ct = default);
+
+    /// <summary>
+    /// Get recently accessed files for the current user.
+    /// Returns distinct files ordered by most recent access, limited to <paramref name="limit"/>.
+    /// </summary>
+    Task<RecentFilesListingDto> GetRecentFilesAsync(int limit = 50, CancellationToken ct = default);
 
     // Path utilities
     string NormalizePath(string path);

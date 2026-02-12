@@ -1,6 +1,7 @@
 using System.Text;
 using Cloud.File.Server.Data;
 using Cloud.File.Server.Data.Entities;
+using Cloud.File.Server.Security;
 using Cloud.File.Server.WebSockets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -9,21 +10,22 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS
+// Add CORS with environment-aware configuration
+var corsOrigins =
+    builder.Configuration.GetSection("Security:CorsOrigins").Get<string[]>()
+    ??
+    [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5174"
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+        policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
 });
 
@@ -102,6 +104,13 @@ builder
 
 builder.Services.AddAuthorization();
 
+// Security services
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Security:FileTypeRestrictions").Get<FileTypeRestrictions>()
+        ?? new FileTypeRestrictions()
+);
+builder.Services.AddSingleton<IFileScanService, NoOpFileScanService>();
+
 // Add services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -126,6 +135,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Security middleware pipeline (order matters)
+app.UseMiddleware<InputSanitizationMiddleware>();
+app.UseMiddleware<RateLimitingMiddleware>();
 
 app.UseCors();
 
@@ -156,5 +169,12 @@ app.MapControllers();
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+// Serve the Vite SPA from wwwroot (production only)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
 
 app.Run();

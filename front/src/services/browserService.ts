@@ -115,6 +115,31 @@ export interface SearchResult {
 }
 
 /**
+ * Recently accessed file item.
+ */
+export interface RecentFileItem {
+  id: string;
+  name: string;
+  path: string;
+  type: "file" | "folder";
+  size: number;
+  mimeType?: string;
+  createdAt: string;
+  modifiedAt: string;
+  accessedAt: string;
+  accessType: string;
+  parentId?: string;
+}
+
+/**
+ * Recent files listing response.
+ */
+export interface RecentFilesListing {
+  items: RecentFileItem[];
+  totalCount: number;
+}
+
+/**
  * Search options.
  */
 export interface SearchOptions {
@@ -260,6 +285,188 @@ export function getDownloadUrl(id: string): string {
 }
 
 /**
+ * Get the inline preview URL for a file.
+ * Returns a URL that serves the file with Content-Disposition: inline.
+ */
+export function getPreviewUrl(id: string): string {
+  return `${API_BASE_URL}${BROWSER_API}/preview/${id}`;
+}
+
+/**
+ * Get an authenticated preview URL by fetching as blob and creating an object URL.
+ * Needed because the preview endpoint requires JWT auth headers.
+ */
+export async function getAuthenticatedPreviewUrl(id: string): Promise<string> {
+  const url = getPreviewUrl(id);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Text preview response from the server.
+ */
+export interface TextPreviewResponse {
+  content: string;
+  totalLines: number;
+  truncated: boolean;
+  language: string;
+}
+
+/**
+ * Get text content of a file for preview.
+ */
+export async function getTextPreview(
+  id: string,
+  maxLines: number = 1000
+): Promise<TextPreviewResponse> {
+  const url = `${API_BASE_URL}${BROWSER_API}/preview/${id}/text?maxLines=${maxLines}`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Determine the preview type for a file based on its name and mime type.
+ */
+export type PreviewType = "image" | "video" | "audio" | "pdf" | "text" | "unsupported";
+
+export function getPreviewType(name: string, mimeType?: string): PreviewType {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  const mime = mimeType || "";
+
+  // Images
+  if (
+    mime.startsWith("image/") ||
+    ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp", "ico", "avif"].includes(ext)
+  ) {
+    return "image";
+  }
+
+  // Videos
+  if (mime.startsWith("video/") || ["mp4", "webm", "mov", "avi", "mkv", "ogg"].includes(ext)) {
+    return "video";
+  }
+
+  // Audio
+  if (
+    mime.startsWith("audio/") ||
+    ["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"].includes(ext)
+  ) {
+    return "audio";
+  }
+
+  // PDF
+  if (mime === "application/pdf" || ext === "pdf") {
+    return "pdf";
+  }
+
+  // Text / code files
+  const textExtensions = [
+    "txt",
+    "md",
+    "markdown",
+    "log",
+    "csv",
+    "json",
+    "xml",
+    "yaml",
+    "yml",
+    "toml",
+    "html",
+    "htm",
+    "css",
+    "js",
+    "jsx",
+    "ts",
+    "tsx",
+    "py",
+    "rb",
+    "java",
+    "cs",
+    "cpp",
+    "c",
+    "h",
+    "hpp",
+    "go",
+    "rs",
+    "swift",
+    "kt",
+    "kts",
+    "sh",
+    "bash",
+    "zsh",
+    "ps1",
+    "sql",
+    "graphql",
+    "gql",
+    "ini",
+    "cfg",
+    "conf",
+    "env",
+    "gitignore",
+    "dockerignore",
+    "editorconfig",
+    "makefile",
+    "dockerfile",
+    "vue",
+    "svelte",
+    "astro",
+    "sass",
+    "scss",
+    "less",
+    "r",
+    "m",
+    "pl",
+    "lua",
+    "dart",
+    "ex",
+    "exs",
+    "erl",
+    "hs",
+    "tf",
+    "hcl",
+    "zig",
+    "nim",
+    "csproj",
+    "sln",
+    "slnx",
+    "props",
+    "targets",
+  ];
+  if (
+    mime.startsWith("text/") ||
+    [
+      "application/json",
+      "application/javascript",
+      "application/xml",
+      "application/x-yaml",
+      "application/yaml",
+    ].includes(mime) ||
+    textExtensions.includes(ext)
+  ) {
+    return "text";
+  }
+
+  return "unsupported";
+}
+
+/**
  * Download a file.
  */
 export async function downloadFile(id: string, fileName?: string): Promise<void> {
@@ -282,6 +489,88 @@ export async function downloadFile(id: string, fileName?: string): Promise<void>
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(blobUrl);
+}
+
+/**
+ * Download a folder as a ZIP archive.
+ */
+export async function downloadFolderAsZip(id: string, folderName?: string): Promise<void> {
+  const url = `${API_BASE_URL}${BROWSER_API}/download/${id}/zip`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = folderName ? `${folderName}.zip` : "folder.zip";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
+/**
+ * Upload a folder structure preserving relative paths.
+ * Each file includes its relative path via the X-Relative-Path header.
+ */
+export async function uploadFolder(
+  files: { file: File; relativePath: string }[],
+  options: {
+    folderId?: string;
+    onProgress?: (uploaded: number, total: number) => void;
+    signal?: AbortSignal;
+  } = {}
+): Promise<UploadResponse[]> {
+  const chunkSize = 10; // Upload in batches of 10 files
+  const results: UploadResponse[] = [];
+  let uploaded = 0;
+
+  for (let i = 0; i < files.length; i += chunkSize) {
+    if (options.signal?.aborted) break;
+
+    const batch = files.slice(i, i + chunkSize);
+    const formData = new FormData();
+
+    for (const { file, relativePath } of batch) {
+      // Create a new file with the relative path as the name
+      // so the backend can extract it from the form data
+      const renamedFile = new File([file], relativePath, { type: file.type });
+      formData.append("files", renamedFile);
+    }
+
+    const params = new URLSearchParams();
+    if (options.folderId) params.set("folderId", options.folderId);
+
+    const url = `${API_BASE_URL}${BROWSER_API}/upload/folder?${params.toString()}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: formData,
+      signal: options.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new ApiError(response.status, errorText || response.statusText);
+    }
+
+    const result = await response.json();
+    if (result.files) {
+      results.push(...result.files);
+    }
+
+    uploaded += batch.length;
+    options.onProgress?.(uploaded, files.length);
+  }
+
+  return results;
 }
 
 /**
@@ -482,4 +771,40 @@ export async function searchFiles(options: SearchOptions): Promise<SearchResult>
   }
 
   return response.json();
+}
+
+/**
+ * Get recently accessed files.
+ */
+export async function getRecentFiles(limit: number = 50): Promise<RecentFilesListing> {
+  const params = new URLSearchParams();
+  if (limit !== 50) params.set("limit", limit.toString());
+
+  const url = `${API_BASE_URL}${BROWSER_API}/recent?${params.toString()}`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Record a file access event for recent files tracking.
+ * Fire and forget — errors are silently ignored.
+ */
+export async function recordFileAccess(id: string, type: string = "view"): Promise<void> {
+  try {
+    const url = `${API_BASE_URL}${BROWSER_API}/access/${id}?type=${encodeURIComponent(type)}`;
+    await fetch(url, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    // Silently ignore — access recording is non-critical
+  }
 }

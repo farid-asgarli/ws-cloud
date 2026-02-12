@@ -5,8 +5,14 @@
 import { getAuthHeaders, clearAuth } from "./authService";
 
 // Base API URL - can be configured via environment variables
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || "ws://localhost:5000";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
+// Derive WebSocket URL from the API base or current page origin
+export const WS_BASE_URL =
+  import.meta.env.VITE_WS_BASE_URL ||
+  (API_BASE_URL
+    ? API_BASE_URL.replace(/^http/, "ws")
+    : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`);
 
 /**
  * API error class with status code and message.
