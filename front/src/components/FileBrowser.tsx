@@ -561,7 +561,7 @@ export function FileBrowser({ className }: FileBrowserProps) {
 
   // Upload
   const handleUpload = useCallback(
-    async (files: FileList | null) => {
+    async (files: FileList | File[] | null) => {
       if (!files || files.length === 0) return;
 
       setUploading(true);
@@ -660,14 +660,18 @@ export function FileBrowser({ className }: FileBrowserProps) {
       e.preventDefault();
       setIsDragOver(false);
 
+      // Capture files synchronously – browsers clear DataTransfer after the
+      // handler yields, so we must read it before any await.
+      const droppedFiles = e.dataTransfer.files;
+
       // Check if the drop contains directories using DataTransferItem API
-      const items = e.dataTransfer.items;
-      if (items && items.length > 0) {
+      const dtItems = e.dataTransfer.items;
+      if (dtItems && dtItems.length > 0) {
         const entries: { file: File; relativePath: string }[] = [];
         const promises: Promise<void>[] = [];
 
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
+        for (let i = 0; i < dtItems.length; i++) {
+          const item = dtItems[i];
           const entry = (item as any).webkitGetAsEntry?.() as FileSystemEntry | null;
           if (entry) {
             promises.push(traverseEntry(entry, "", entries));
@@ -700,11 +704,20 @@ export function FileBrowser({ className }: FileBrowserProps) {
             }
             return;
           }
+
+          // Plain files resolved from entries – use them directly since
+          // e.dataTransfer.files is no longer available after the await.
+          if (entries.length > 0) {
+            const files = entries.map((e) => e.file);
+            await handleUpload(files);
+            return;
+          }
         }
       }
 
-      // Fallback: regular file upload
-      await handleUpload(e.dataTransfer.files);
+      // Fallback: regular file upload (only reached when webkitGetAsEntry
+      // was not available, so no async work happened yet).
+      await handleUpload(droppedFiles);
     },
     [handleUpload, folderId, loadDirectory]
   );
@@ -838,7 +851,9 @@ export function FileBrowser({ className }: FileBrowserProps) {
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Copy to...</p></TooltipContent>
+                <TooltipContent>
+                  <p>Copy to...</p>
+                </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -851,7 +866,9 @@ export function FileBrowser({ className }: FileBrowserProps) {
                     <Move className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Move to...</p></TooltipContent>
+                <TooltipContent>
+                  <p>Move to...</p>
+                </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -864,7 +881,9 @@ export function FileBrowser({ className }: FileBrowserProps) {
                     <Trash2 className="text-destructive h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Delete</p></TooltipContent>
+                <TooltipContent>
+                  <p>Delete</p>
+                </TooltipContent>
               </Tooltip>
               {selectedItems.size === 1 && (
                 <Tooltip>
@@ -881,7 +900,9 @@ export function FileBrowser({ className }: FileBrowserProps) {
                       <Info className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent><p>Properties</p></TooltipContent>
+                  <TooltipContent>
+                    <p>Properties</p>
+                  </TooltipContent>
                 </Tooltip>
               )}
             </>
@@ -990,7 +1011,9 @@ export function FileBrowser({ className }: FileBrowserProps) {
             <div className="bg-muted mb-5 flex h-20 w-20 items-center justify-center rounded-3xl">
               <FolderOpen className="text-muted-foreground h-9 w-9" />
             </div>
-            <p className="text-foreground text-lg font-semibold tracking-tight">This folder is empty</p>
+            <p className="text-foreground text-lg font-semibold tracking-tight">
+              This folder is empty
+            </p>
             <p className="text-muted-foreground mt-1.5 max-w-xs text-center text-sm">
               Drag and drop files here, or use the buttons below to get started
             </p>
@@ -1057,7 +1080,7 @@ export function FileBrowser({ className }: FileBrowserProps) {
                         getFileIcon(item)
                       )}
                     </div>
-                    <span className="w-full truncate text-center text-[13px] font-medium leading-tight">
+                    <span className="w-full truncate text-center text-[13px] leading-tight font-medium">
                       {item.name}
                     </span>
                     {item.type === "file" && (
@@ -1066,9 +1089,7 @@ export function FileBrowser({ className }: FileBrowserProps) {
                       </span>
                     )}
                     {item.type === "folder" && (
-                      <span className="text-muted-foreground mt-1 text-[11px]">
-                        Folder
-                      </span>
+                      <span className="text-muted-foreground mt-1 text-[11px]">Folder</span>
                     )}
                   </div>
                 </ContextMenuTrigger>
@@ -1316,9 +1337,7 @@ export function FileBrowser({ className }: FileBrowserProps) {
               `${items.filter((i) => i.type === "file").length} file${items.filter((i) => i.type === "file").length !== 1 ? "s" : ""}`}
           </span>
           {selectedItems.size > 0 && (
-            <span className="text-muted-foreground text-[12px]">
-              {selectedItems.size} selected
-            </span>
+            <span className="text-muted-foreground text-[12px]">{selectedItems.size} selected</span>
           )}
         </div>
       )}
@@ -1326,7 +1345,7 @@ export function FileBrowser({ className }: FileBrowserProps) {
       {/* Drag overlay */}
       {isDragOver && (
         <div className="bg-primary/5 border-primary/40 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl border-2 border-dashed backdrop-blur-[2px] transition-all duration-200">
-          <div className="text-center animate-in fade-in zoom-in-95 duration-200">
+          <div className="animate-in fade-in zoom-in-95 text-center duration-200">
             <div className="bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
               <Upload className="text-primary h-7 w-7" />
             </div>
@@ -1397,9 +1416,13 @@ export function FileBrowser({ className }: FileBrowserProps) {
             <div className="bg-destructive/10 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
               <Trash2 className="text-destructive h-5 w-5" />
             </div>
-            <AlertDialogTitle className="text-center">Delete {itemsToDelete.length === 1 ? "Item" : `${itemsToDelete.length} Items`}</AlertDialogTitle>
+            <AlertDialogTitle className="text-center">
+              Delete {itemsToDelete.length === 1 ? "Item" : `${itemsToDelete.length} Items`}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              Are you sure you want to delete {itemsToDelete.length === 1 ? "this item" : `these ${itemsToDelete.length} items`}? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              {itemsToDelete.length === 1 ? "this item" : `these ${itemsToDelete.length} items`}?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center">
